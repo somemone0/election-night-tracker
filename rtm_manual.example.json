@@ -1,0 +1,4 @@
+{
+  "_about": "Copy to rtm_manual.json and type in numbers from a county's own results page. Used only when that county's automated source fails (San Francisco blocks automated requests).",
+  "San Francisco": {"yes": 0, "no": 0, "precincts_done": 0, "precincts_total": 514, "as_of": "Nov. 3, 9:45 p.m."}
+}

@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Build output (vite writes these into site/; rebuild with `npm run build` in web/)
+site/app/
+site/index.html
+
+# Live results written by tracker.py
+site/data/
+
+# Election-night hand entries (copy from rtm_manual.example.json)
+rtm_manual.json
+
+# Python
+__pycache__/
+*.pyc
+
+# Local
+.env
+.env.*
+.DS_Store
+*.log

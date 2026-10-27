@@ -1,0 +1,35 @@
+{
+ "VPCFE": false,
+ "Contests": [
+  {
+   "C": "GOVERNOR",
+   "K": "200",
+   "CH": [
+    "XAVIER BECERRA",
+    "STEVE HILTON"
+   ],
+   "V": [
+    0,
+    0
+   ],
+   "TP": 938,
+   "PR": 0,
+   "TV": 0
+  },
+  {
+   "C": "REGIONAL MEASURE RTM - REGIONAL TRANSIT MEASURE - MAJORITY",
+   "K": "9100",
+   "CH": [
+    "YES",
+    "NO"
+   ],
+   "V": [
+    0,
+    0
+   ],
+   "TP": 938,
+   "PR": 0,
+   "TV": 0
+  }
+ ]
+}

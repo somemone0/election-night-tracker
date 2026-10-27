@@ -1,0 +1,7 @@
+{
+  "_about": "Where the tracker reads Measure RTM for each county besides Alameda. Fill in the Clarity addresses on election night: open the county's results link and copy the part up to the election number, e.g. https://results.enr.clarityelections.com/CA/Contra_Costa/126374",
+  "Contra Costa": {"type": "clarity", "url": null, "note": "Set the Nov. 3 Clarity address from contracostavote.gov/november-3-2026-election-results"},
+  "Santa Clara": {"type": "clarity", "url": null, "note": "Set the Nov. 3 Clarity address from the 'Official Election Results' link on vote.santaclaracounty.gov"},
+  "San Mateo": {"type": "smcacre", "url": "https://smcacre.gov/node/3146"},
+  "San Francisco": {"type": "sfelections", "url": "https://www.sfelections.org/results/20261103/index.html"}
+}

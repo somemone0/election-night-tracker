@@ -1,0 +1,61 @@
+{
+  "precincts_total": 23863,
+  "measures": [
+    {
+      "Number": "01",
+      "Name": "Authorizes Bonds For Housing Affordability Programs. Legislative Statute."
+    },
+    {
+      "Number": "02",
+      "Name": "Increases State's Rainy Day Fund. Legislative Constitutional Amendment."
+    },
+    {
+      "Number": "03",
+      "Name": "Provides Permanent Funding For Schools And Health Care By Extending Existing Tax On High Incomes. Initiative Constitutional Amendment."
+    },
+    {
+      "Number": "04",
+      "Name": "Repeals Prohibition Against Public Funding Of Election Campaigns. Legislative Statute."
+    },
+    {
+      "Number": "05",
+      "Name": "Changes Recall Election Process For Statewide Officers. Legislative Constitutional Amendment."
+    },
+    {
+      "Number": "37",
+      "Name": "Creates Loan Program For Middle-Income Buyers Of Qualified New Homes. Initiative Statute."
+    },
+    {
+      "Number": "38",
+      "Name": "Authorizes Bonds For Immunology Medical Research. Initiative Statute."
+    },
+    {
+      "Number": "39",
+      "Name": "Prohibits Citizens From Voting Unless They Present Government-Issued Identification. Initiative Constitutional Amendment."
+    },
+    {
+      "Number": "40",
+      "Name": "Imposes One-Time Tax On Certain Taxpayers. Initiative Constitutional Amendment And Statute."
+    },
+    {
+      "Number": "41",
+      "Name": "Prohibits New State Taxes That Exclude Revenues From State Spending Limit. Requires Audits For New State Special Taxes. Initiative Constitutional Amendment."
+    },
+    {
+      "Number": "42",
+      "Name": "Prohibits New State Personal Property Taxes And Certain Retroactive State Taxes. Initiative Constitutional Amendment."
+    },
+    {
+      "Number": "43",
+      "Name": "Limits Voters' Ability To Raise Revenues For Local Government Services. Legislative Constitutional Amendment."
+    },
+    {
+      "Number": "44",
+      "Name": "Requires Community Health Clinics Spend 90% Of Revenue On Program Services. Initiative Statute."
+    },
+    {
+      "Number": "45",
+      "Name": "Modifies Environmental Review For Certain Projects. Initiative Statute."
+    }
+  ]
+}
