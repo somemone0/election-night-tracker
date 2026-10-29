@@ -30,6 +30,12 @@ describe("card layout", () => {
     expect(hidden).toBeGreaterThan(0);
     expect(moreCount).toBe(2 + hidden);
   });
+  it("pinned cards stay centered on their point and the others move out of their way", () => {
+    const items = [item("d4", 500, 400, 1, { pin: true }), item("c", 500, 400, 0)];
+    const { offsets } = layoutCards(items, box, new Map());
+    expect(offsets.get("d4")).toEqual({ below: false, lift: 0, dx: 0, center: true });
+    expect(overlap(rectFor(items[0], offsets.get("d4")!), rectFor(items[1], offsets.get("c")!))).toBe(false);
+  });
   it("stays clear of areas it is told to avoid", () => {
     const { offsets } = layoutCards([item("a", 100, 100)], { ...box, avoid: [{ x: 0, y: 0, w: 300, h: 100 }] }, new Map());
     const r = rectFor(item("a", 100, 100), offsets.get("a")!);

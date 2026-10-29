@@ -2,10 +2,13 @@
 
 export interface Precincts { done: number; total: number; pct: number }
 
+/** A race call (see calls.py): an editor's desk call, or decided by the count (the trailing side cannot catch up). */
+export interface Call { winners: string[]; how: "desk" | "decided"; at: string }
+
 export interface MeasureCount {
   yes: number; no: number; yes_pct: number; no_pct: number;
   leader: "yes" | "no" | "tied" | null; margin: number;
-  total?: number; precincts?: Precincts | null;
+  total?: number; precincts?: Precincts | null; call?: Call;
 }
 
 export interface Row { name: string; votes: number; pct: number; party?: string }
@@ -16,13 +19,13 @@ interface RaceBase {
   city: string | null; cd: number | string | null;
   category?: string | null; subcategory?: string | null;
   title: string; rcv: boolean; rule: string | null;
-  precincts: Precincts | null; total: number;
+  precincts: Precincts | null; total: number; seats?: number; call?: Call;
 }
 export interface CandidateRace extends RaceBase { kind: "candidate"; rows: Row[] }
 export interface MeasureRace extends RaceBase, Omit<MeasureCount, "total" | "precincts"> { kind: "measure"; rows?: Row[] }
 export type Race = CandidateRace | MeasureRace;
 
-export interface Contest { title: string; candidates: Row[]; total: number; precincts: Precincts | null; reporting_time?: string }
+export interface Contest { title: string; candidates: Row[]; total: number; precincts: Precincts | null; reporting_time?: string; call?: Call }
 
 export interface RtmCounty {
   county: string; yes: number; no: number; yes_pct: number; no_pct: number;

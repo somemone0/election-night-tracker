@@ -10,11 +10,11 @@ export function useGeo() {
   useEffect(() => {
     let alive = true;
     (async () => {
-      const heads = fetch(CONFIG.headshots).then(r => (r.ok ? r.json() : {}) as Promise<{ slugs?: Record<string, unknown> }>).then(j => setHeadshots(j.slugs || {})).catch(() => {});
+      const heads = fetch(CONFIG.headshots, { cache: "no-cache" }).then(r => (r.ok ? r.json() : {}) as Promise<{ slugs?: Record<string, unknown> }>).then(j => setHeadshots(j.slugs || {})).catch(() => {});
       for (let attempt = 0; attempt < 4 && alive; attempt++) {
         try {
           const parts = await Promise.all(Object.entries(CONFIG.geo).map(async ([k, u]) => {
-            const r = await fetch(u);
+            const r = await fetch(u, { cache: "no-cache" });   // revalidate: boundaries change between deploys
             if (!r.ok) throw new Error(`${u}: HTTP ${r.status}`);
             return [k, (await r.json()) as AreaCollection] as const;
           }));

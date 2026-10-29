@@ -18,7 +18,7 @@ export default defineConfig({
     rollupOptions: { output: { manualChunks: { maplibre: ["maplibre-gl"], react: ["react", "react-dom"] } } },
   },
   server: {
-    proxy: Object.fromEntries(["/data", "/geo", "/img"].map(p => [p, "http://127.0.0.1:8077"])),
+    proxy: Object.fromEntries(["/data", "/geo", "/img", "/measures.json"].map(p => [p, "http://127.0.0.1:8077"])),
   },
   test: { environment: "node", include: ["test/**/*.test.ts"] },
 });

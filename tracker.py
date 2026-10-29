@@ -26,6 +26,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import alameda_parse
+import calls
 import rtm
 
 HERE = Path(__file__).resolve().parent
@@ -148,9 +149,9 @@ def feed_warnings(sos_state, alameda):
     out = []
     d = feed_date(sos_state["reporting_time"]) if sos_state else None
     if d and d < ELECTION_DATE:
-        out.append(f"The Secretary of State feed is stamped {sos_state['reporting_time']}, before Election Day. It is probably serving test data, so do not treat these numbers as results.")
+        out.append("Statewide numbers are pre-election test data, not results.")
     if alameda and ELECTION_LABEL not in (alameda["title"] or ""):
-        out.append(f"The county's results page is not showing the Nov. 3 General Election yet (it shows: {alameda['title']}).")
+        out.append("Alameda County hasn't posted Nov. 3 results yet.")
     return out
 
 
@@ -197,6 +198,7 @@ def normalize_alameda(parsed):
             "kind": r["kind"],
             "rcv": r["rcv"],
             "rule": r["passing"] or None,
+            "seats": r.get("seats") or 1,
             "precincts": r["precincts"],
         }
         if r["kind"] == "measure":
@@ -345,8 +347,11 @@ def atomic_write(path, text):
 
 # --------------------------------------------------------------------------- poll loop
 class Tracker:
-    def __init__(self, sos_base, alameda_base, election_id, out_dir, mock=False, rtm_sources=None, rtm_manual=None, rtm_sources_path=None):
+    def __init__(self, sos_base, alameda_base, election_id, out_dir, mock=False, rtm_sources=None, rtm_manual=None, rtm_sources_path=None,
+                 calls_path=None):
         self.mock = mock
+        self.calls_path = calls_path   # editors' calls and outstanding-ballot counts; re-read every poll
+        self.caller = calls.Caller()
         self.rtm_sources = rtm_sources or {}
         self.rtm_sources_path = rtm_sources_path   # re-read every poll, so new addresses apply without a restart
         self.rtm_manual = rtm_manual
@@ -394,6 +399,12 @@ class Tracker:
         for name in jobs:
             if name not in fresh and self.last[name]:
                 snap["meta"][name]["stale"] = True
+        try:   # race calls: editors' desk calls, plus races the count has made certain
+            cfg = load_calls(self.calls_path)
+            mock_out = fetch_json(f"{self.sos_base}/__mock/outstanding") if self.mock else None
+            self.caller.apply(snap, cfg, mock_out)
+        except Exception as e:
+            errors.append({"source": "calls", "error": str(e), "at": datetime.now(timezone.utc).isoformat(timespec="seconds")})
         write_outputs(self.out_dir, snap)
         return snap
 
@@ -414,6 +425,11 @@ def summarize(snap):
     if r:
         bits.append(f"RTM {r['total']['yes_pct']:.1f}% yes ({r['counties_in']}/5 counties)")
     bits.append(f"{len(snap['races'])} races")
+    called = sum("call" in r for r in snap["races"])
+    if called:
+        bits.append(f"{called} called")
+    for w in (snap["meta"].get("calls") or {}).get("warnings", []):
+        bits.append("CALL CHECK: " + w)
     if snap["meta"]["errors"]:
         bits.append("ERRORS: " + "; ".join(f"{e['source']}: {e['error'][:70]}" for e in snap["meta"]["errors"]))
     return " | ".join(bits)
@@ -426,6 +442,16 @@ def mock_rtm_sources(base):
         "San Mateo": {"type": "smcacre", "url": f"{base}/smcacre/node/3146"},
         "San Francisco": {"type": "sfelections", "url": f"{base}/sfelections/results/20261103/index.html"},
     }
+
+
+def load_calls(path):
+    """calls.json, or {} when there is none. A file that does not parse is an error (reported), never silently empty."""
+    if not path or not Path(path).exists():
+        return {}
+    try:
+        return json.loads(Path(path).read_text())
+    except ValueError as e:
+        raise ValueError(f"{path} is not valid JSON ({e}); no desk calls applied") from None
 
 
 def load_rtm_sources(path):
@@ -452,6 +478,7 @@ def main(argv=None):
     ap.add_argument("--host", default="127.0.0.1", help="address to serve on (0.0.0.0 in a container)")
     ap.add_argument("--rtm-sources", default=str(HERE / "rtm_sources.json"), help="where to read Measure RTM in the other four counties")
     ap.add_argument("--rtm-manual", default=str(HERE / "rtm_manual.json"), help="hand-entered RTM numbers, used when a county cannot be read")
+    ap.add_argument("--calls", default=str(HERE / "calls.json"), help="editors' race calls and outstanding-ballot counts (see calls.py)")
     ap.add_argument("--mock", action="store_true", help="start the mock election-night server and poll it")
     ap.add_argument("--mock-port", type=int, default=8765)
     ap.add_argument("--start", type=float, default=-30.0, help="mock clock: sim minutes after 8 p.m.")
@@ -476,7 +503,7 @@ def main(argv=None):
     if a.mock:   # every county's RTM source points at the mock server
         rtm_sources = mock_rtm_sources(sos_base)
     tr = Tracker(sos_base, alameda_base, a.election_id, out_dir, mock=a.mock, rtm_sources=rtm_sources, rtm_manual=a.rtm_manual,
-                 rtm_sources_path=None if a.mock else a.rtm_sources)
+                 rtm_sources_path=None if a.mock else a.rtm_sources, calls_path=a.calls)
     print(f"[poll] SoS {sos_base} | Alameda {alameda_base}/rovresults/{a.election_id}/ | every {a.interval:g}s")
     try:
         while True:

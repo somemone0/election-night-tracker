@@ -1,0 +1,20 @@
+{
+  "_help": "Copy to calls.json. Every part is optional; see calls.py for the rules. Race names under 'alameda' are the titles exactly as the county results page prints them.",
+  "outstanding": {
+    "Alameda": 120000,
+    "California": 3900000,
+    "Contra Costa": 61000,
+    "San Francisco": 40000,
+    "San Mateo": 22000,
+    "Santa Clara": 95000
+  },
+  "state": {
+    "Prop 40": "No",
+    "Governor": "Xavier Becerra"
+  },
+  "alameda": {
+    "U.S. Representative, 12th Congressional District": "Lateefah Simon",
+    "School Directors - Berkeley": ["First Winner", "Second Winner", "Third Winner"]
+  },
+  "rtm": "Yes"
+}

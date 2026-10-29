@@ -1,8 +1,9 @@
 // Place cards so they never cover each other: straight up from their point, then nudged sideways, stacked, or below.
+// Pinned cards (council districts) go first, centered on their point, and never move; the rest avoid them.
 // Pure: takes screen points and card sizes, returns an offset per card (or null = no room, hide it).
 
-export interface Offset { below: boolean; lift: number; dx: number }
-export interface LayoutItem { key: string; x: number; y: number; w: number; h: number; prio: number; more?: boolean; moreCount?: number; scope: string }
+export interface Offset { below: boolean; lift: number; dx: number; center?: boolean }
+export interface LayoutItem { key: string; x: number; y: number; w: number; h: number; prio: number; more?: boolean; moreCount?: number; scope: string; pin?: boolean }
 export interface Bounds { top: number; left: number; right: number; bottom: number; avoid?: { x: number; y: number; w: number; h: number }[] }
 
 export const GAP = 10, TAIL = 12;
@@ -12,11 +13,12 @@ const overlaps = (a: Rect, b: Rect) => a.x < b.x + b.w && b.x < a.x + a.w && a.y
 
 export const rectFor = (it: { x: number; y: number; w: number; h: number }, o: Offset): Rect => ({
   x: it.x - it.w / 2 + o.dx,
-  y: o.below ? it.y + TAIL + o.lift : it.y - TAIL - o.lift - it.h,
+  y: o.center ? it.y - it.h / 2 : o.below ? it.y + TAIL + o.lift : it.y - TAIL - o.lift - it.h,
   w: it.w, h: it.h,
 });
 
-const same = (a: Offset, b: Offset) => a.below === b.below && a.lift === b.lift && a.dx === b.dx;
+export const PINNED: Offset = { below: false, lift: 0, dx: 0, center: true };
+const same = (a: Offset, b: Offset) => a.below === b.below && a.lift === b.lift && a.dx === b.dx && !!a.center === !!b.center;
 
 export function layoutCards(items: LayoutItem[], bounds: Bounds, prev: Map<string, Offset | null>) {
   const placed: Rect[] = [...(bounds.avoid || [])];
@@ -41,7 +43,11 @@ export function layoutCards(items: LayoutItem[], bounds: Bounds, prev: Map<strin
     return null;
   };
 
-  for (const it of [...items].sort((a, b) => a.prio - b.prio)) {
+  for (const it of items.filter(i => i.pin)) {   // always shown, always on their point
+    placed.push(rectFor(it, PINNED));
+    out.set(it.key, prev.get(it.key)?.center ? prev.get(it.key)! : PINNED);
+  }
+  for (const it of [...items].filter(i => !i.pin).sort((a, b) => a.prio - b.prio)) {
     if (it.more) { moreItem = it; continue; }   // placed last, once we know what did not fit
     const o = place(it);
     out.set(it.key, o);

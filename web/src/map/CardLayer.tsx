@@ -7,9 +7,12 @@
 // Transitions between levels: cards that stay keep their element; new ones fade in and old ones fade out. When a
 // city's stacked "cluster" card gives way to its races (zooming in), the races fly out from the cluster's spot; zooming
 // out, they fly back into it while the cluster fades in.
+//
+// In a city, council districts' cards are pinned to the center of their district; every other race is in the strip
+// along the bottom of the map (components/RaceStrip), which cards keep clear of (bottomInset).
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Map as MlMap } from "maplibre-gl";
-import { CONFIG } from "../config";
+import { CONFIG, DISTRICT_COLORS } from "../config";
 import type { CardSpec } from "../lib/cards";
 import { layoutCards, type Offset } from "../lib/layout";
 import { CardBody, cardClass, cardLabel } from "./Card";
@@ -21,6 +24,7 @@ export interface CardLayerProps {
   map: MlMap;
   cards: CardSpec[];
   rightInset: number;             // px of the map covered by the results panel
+  bottomInset: number;            // px covered by Berkeley's race strip
   activeWard: string | null;
   onCard: (s: CardSpec) => void;
 }
@@ -45,9 +49,9 @@ function nextEntries(prev: Entry[], cards: CardSpec[], now: number, moving: bool
 }
 
 const sameOffsets = (a: Map<string, Offset | null>, b: Map<string, Offset | null>) =>
-  a.size === b.size && [...a].every(([k, v]) => { const w = b.get(k); return v === w || (!!v && !!w && v.dx === w.dx && v.lift === w.lift && v.below === w.below); });
+  a.size === b.size && [...a].every(([k, v]) => { const w = b.get(k); return v === w || (!!v && !!w && v.dx === w.dx && v.lift === w.lift && v.below === w.below && !!v.center === !!w.center); });
 
-export function CardLayer({ map, cards, rightInset, activeWard, onCard }: CardLayerProps) {
+export function CardLayer({ map, cards, rightInset, bottomInset, activeWard, onCard }: CardLayerProps) {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [offsets, setOffsets] = useState<Map<string, Offset | null>>(new Map());
   const [moreCount, setMoreCount] = useState<number | undefined>(undefined);
@@ -58,6 +62,7 @@ export function CardLayer({ map, cards, rightInset, activeWard, onCard }: CardLa
   const offsetsRef = useRef(offsets); offsetsRef.current = offsets;
   const entriesRef = useRef(entries); entriesRef.current = entries;
   const insetRef = useRef(rightInset); insetRef.current = rightInset;
+  const bottomRef = useRef(bottomInset); bottomRef.current = bottomInset;
 
   // which cards exist (with enter/exit phases)
   useEffect(() => { setEntries(prev => nextEntries(prev, cards, performance.now(), moving.current)); }, [cards]);
@@ -88,11 +93,11 @@ export function CardLayer({ map, cards, rightInset, activeWard, onCard }: CardLa
     const size = map.getContainer().getBoundingClientRect();
     const items = entriesRef.current.filter(e => e.phase !== "out").map(e => {
       const p = map.project(e.spec.ll), el = body.current.get(e.spec.key);
-      return { key: e.spec.key, x: p.x, y: p.y, w: el?.offsetWidth || 200, h: el?.offsetHeight || 80, prio: e.spec.prio, more: e.spec.more, moreCount: e.spec.moreCount, scope: e.spec.scope };
+      return { key: e.spec.key, x: p.x, y: p.y, w: el?.offsetWidth || 200, h: el?.offsetHeight || 80, prio: e.spec.prio, more: e.spec.more, moreCount: e.spec.moreCount, scope: e.spec.scope, pin: e.spec.pin };
     });
     const { offsets: next, moreCount: n } = layoutCards(items, {
-      top: 10, left: 4, right: size.width - insetRef.current - 4, bottom: size.height - 8,
-      avoid: [{ x: 0, y: 0, w: 66, h: 110 }],   // zoom buttons
+      top: 10, left: 4, right: size.width - insetRef.current - 4, bottom: size.height - 8 - bottomRef.current,
+      avoid: [{ x: 0, y: 0, w: 66, h: 90 }, { x: 0, y: 88, w: 170, h: 40 }],   // zoom buttons, legend
     }, offsetsRef.current);
     if (!sameOffsets(next, offsetsRef.current)) setOffsets(next);
     setMoreCount(n || undefined);
@@ -115,7 +120,20 @@ export function CardLayer({ map, cards, rightInset, activeWard, onCard }: CardLa
     // React calls ref callbacks with null on every re-render, so card coordinates are set in the ref and pruned here
     for (const k of lls.current.keys()) if (!pos.current.has(k)) lls.current.delete(k);
     reposition(); relayout();
-  }, [entries, rightInset, reposition, relayout]);
+  }, [entries, rightInset, bottomInset, reposition, relayout]);
+
+  const button = (e: Entry, extraClass: string, fits: boolean, style: Record<string, string | undefined>, moreN?: number) => {
+    const s = e.spec;
+    return (
+      <button type="button" tabIndex={e.phase === "out" || !fits ? -1 : 0} aria-label={cardLabel(s)} aria-hidden={e.phase === "out" || !fits || undefined}
+        className={cardClass(s, activeWard) + extraClass + (fits ? "" : " nofit")}
+        style={{ ...style, ["--dc" as any]: s.scope === "ward" ? DISTRICT_COLORS[s.area[1]]?.fill : undefined }}
+        ref={el => { if (el) body.current.set(s.key, el); else body.current.delete(s.key); }}
+        onClick={ev => { ev.stopPropagation(); if (e.phase !== "out") onCard(s); }}>
+        <CardBody s={s} moreCount={moreN} />
+      </button>
+    );
+  };
 
   return (
     <div className="cards" aria-label="Races on the map">
@@ -127,19 +145,14 @@ export function CardLayer({ map, cards, rightInset, activeWard, onCard }: CardLa
           fx = Math.round(b.x - a.x); fy = Math.round(b.y - a.y);
         }
         const fits = e.phase === "out" || o !== null;     // undefined = not laid out yet: show at the default spot
-        const stacked = !!o && (o.below || o.lift > 0 || o.dx !== 0);
+        const stacked = !!o && (o.below || o.lift > 0 || o.dx !== 0 || !!o.center);
         return (
           <div key={s.key} className={`cardpos ${e.phase}${e.held ? " held" : ""}`} data-fly={e.fly ? "1" : undefined}
             style={{ zIndex: 1000 - Math.round(s.prio * 10), ["--fx" as any]: fx + "px", ["--fy" as any]: fy + "px", ["--t" as any]: CONFIG.transitionMs + "ms" }}
             ref={el => { if (el) { pos.current.set(s.key, el); lls.current.set(s.key, s.ll); } else pos.current.delete(s.key); }}>
             <div className="fly">
-              <button type="button" tabIndex={e.phase === "out" || !fits ? -1 : 0} aria-label={cardLabel(s)} aria-hidden={e.phase === "out" || !fits || undefined}
-                className={cardClass(s, activeWard) + (o?.below ? " below" : "") + (stacked ? " stacked" : "") + (fits ? "" : " nofit")}
-                style={{ ["--dx" as any]: (o?.dx ?? 0) + "px", ["--lift" as any]: (o?.lift ?? 0) + "px" }}
-                ref={el => { if (el) body.current.set(s.key, el); else body.current.delete(s.key); }}
-                onClick={ev => { ev.stopPropagation(); if (e.phase !== "out") onCard(s); }}>
-                <CardBody s={s} moreCount={s.more ? moreCount : undefined} />
-              </button>
+              {button(e, (o?.center ? " center" : o?.below ? " below" : "") + (stacked ? " stacked" : ""), fits,
+                { ["--dx" as any]: (o?.dx ?? 0) + "px", ["--lift" as any]: (o?.lift ?? 0) + "px" }, s.more ? moreCount : undefined)}
             </div>
           </div>
         );

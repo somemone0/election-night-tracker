@@ -1,4 +1,4 @@
-import type { MeasureCount, Precincts } from "../types";
+import type { Call, MeasureCount, Precincts } from "../types";
 
 export const fmt = (n: number) => Number(n || 0).toLocaleString("en-US");
 export const pct = (n: number, d = 1) => `${Number(n || 0).toFixed(d)}%`;
@@ -20,6 +20,12 @@ export function measureStatus(m: MeasureCount, rule?: string | null) {
   if (th > 50) return `Yes at ${pct(m.yes_pct)}, needs ${pct(th, th % 1 ? 1 : 0)}`;
   if (m.leader === "tied") return "Tied";
   return `${m.leader === "yes" ? "Yes" : "No"} leads by ${m.margin.toFixed(1)} pts`;
+}
+
+/** "Simon wins", "Ishii, Lunaparra win", "Passes", "Fails". */
+export function callText(c: Call, measure: boolean, short: (n: string) => string = n => n) {
+  if (measure) return c.winners[0] === "Yes" ? "Passes" : "Fails";
+  return `${c.winners.map(short).join(", ")} ${c.winners.length > 1 ? "win" : "wins"}`;
 }
 
 export const precinctMeta = (p?: Precincts | null) => (p ? `${fmt(p.done)} of ${fmt(p.total)} precincts` : null);

@@ -13,6 +13,8 @@ Emulates, from public documentation and the structure of the real pages:
       GET /smcacre/node/3146 (links "Results on CSV")  and  /smcacre/media/9099/download             San Mateo
       GET /sfelections/results/20261103/index.html                                                San Francisco
       /__mock/fault?mode=sf403 makes the San Francisco page refuse requests, like the real one does
+  * Outstanding ballots (what the registrars' unprocessed-ballot reports give editors; used for race calls)
+      GET /__mock/outstanding                       {"Alameda": n, "California": n, "Contra Costa": n, ...}
   * Alameda County Registrar results page
       GET /rovresults/<electionId>/                 HTML, same markup as the real page
 
@@ -44,6 +46,7 @@ import alameda_parse
 
 HERE = Path(__file__).resolve().parent
 POLLS_CLOSE = datetime(2026, 11, 3, 20, 0)  # 8:00 p.m. Pacific, naive
+CERTIFIED = 43200  # minutes after poll close (~30 days); the count is final from here on
 
 STATE = {"precincts": 23863, "ballots": 12_400_000}
 ALAMEDA = {"precincts": 627, "ballots": 575_000, "registered": 983_925}
@@ -76,7 +79,7 @@ def ballots_fraction(t):
     """Share of eventual ballots counted t minutes after poll close (t=None -> nothing)."""
     if t is None:
         return 0.0
-    if t >= 43200:  # certified, ~30 days
+    if t >= CERTIFIED:
         return 1.0
     return min(1.0, 0.52 + 0.30 * (1 - math.exp(-t / 160)) + 0.18 * (1 - math.exp(-t / 5000)))
 
@@ -118,7 +121,7 @@ def tally_series(key, final_total, final_yes, drift):
     series = {}
     yes = no = 0.0
     prev_f = 0.0
-    times = [0] + list(range(15, 720, 15)) + list(range(720, 43201, 360))
+    times = [0] + list(range(15, 720, 15)) + list(range(720, CERTIFIED + 1, 360))
     for tb in times:
         f = ballots_fraction(tb)
         delta = (f - prev_f) * final_total
@@ -139,7 +142,7 @@ def tally(key, final_total, final_yes, drift, t):
     tb = batch_time(t)
     if tb is None:
         return 0, 0
-    return tally_series(key, round(final_total), final_yes, drift)[tb]
+    return tally_series(key, round(final_total), final_yes, drift)[min(tb, CERTIFIED)]
 
 
 def measure_votes(scope, number, t):
@@ -249,6 +252,13 @@ def rtm_votes(county, t):
     ballots, precincts, share = RTM_COUNTIES[county]
     yes, no = tally(f"rtm:{county}", ballots * ROLLOFF, share, -0.02, t)
     return yes, no, round(precincts * precincts_fraction(batch_time(t))), precincts
+
+
+def outstanding(t):
+    """Ballots not yet counted at sim minute t, per place (the model's final ballots minus what has been counted)."""
+    left = 1 - ballots_fraction(batch_time(t))
+    out = {"Alameda": ALAMEDA["ballots"], "California": STATE["ballots"], **{c: v[0] for c, v in RTM_COUNTIES.items()}}
+    return {k: round(v * left) for k, v in out.items()}
 
 
 # --------------------------------------------------------------------------- clock
@@ -497,6 +507,8 @@ class Handler(BaseHTTPRequestHandler):
             if "set" in q or "speed" in q:
                 self.clock.set(q["set"][0] if "set" in q else None, q["speed"][0] if "speed" in q else None)
             return self.json(self.clock.snapshot())
+        if path == "/__mock/outstanding":
+            return self.json(outstanding(self.clock.minutes()))
         if path == "/__mock/fault":
             self.fault["mode"] = q.get("mode", ["none"])[0]
             return self.json(self.fault)

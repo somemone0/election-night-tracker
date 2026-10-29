@@ -155,6 +155,12 @@ class _Parser(HTMLParser):
         self._finish_race()
 
 
+def seats_of(votefor):
+    """'Vote for One (1) Only' -> 1, 'Vote for no more than Four (4)' -> 4; 1 when the page does not say."""
+    m = re.search(r"\((\d+)\)", votefor or "")
+    return int(m.group(1)) if m else 1
+
+
 def _clean(s):
     return re.sub(r"\s+", " ", s.replace("\xa0", " ")).strip()
 
@@ -163,7 +169,7 @@ def parse(html):
     """Return {'updated': str, 'title': str, 'races': [...]}.
 
     Each race has category, subcategory, title, precincts {done,total,pct},
-    rows, kind ('measure' when the rows are Yes/No) and rcv.
+    rows, kind ('measure' when the rows are Yes/No), rcv and seats (from "Vote for no more than Two (2)").
     Propositions are expanded to one race per proposition (category 'State').
     """
     p = _Parser()
@@ -210,6 +216,7 @@ def parse(html):
                 "kind": kind,
                 "rcv": r["rcv"],
                 "passing": r["passing"],
+                "seats": seats_of(r["votefor"]),
                 "rows": r["rows"],
             }
         )

@@ -24,6 +24,7 @@ interface Props {
   elected: Set<string>;
   activeWard: string | null;
   rightInset: number;
+  bottomInset: number;            // px of the map covered by Berkeley's race strip (cards stay above it)
   onZoomView: (v: View) => void;
   onPick: (level: Level, id: string) => void;
   onWard: (id: string) => void;
@@ -49,7 +50,7 @@ export function MapView(props: Props) {
   };
   const zeff = (m: MlMap) => { const v = visible(m); return effectiveZoom(m.getZoom(), v.w, v.h); };
   const visCenter = (m: MlMap) => { const v = visible(m); return m.unproject([v.w / 2, v.h / 2]); };
-  const padding = (m: MlMap) => ({ top: 40, bottom: 40, left: 72, right: visible(m).inset + 24 });
+  const padding = (m: MlMap) => ({ top: 40, bottom: 40 + live.current.bottomInset, left: 72, right: visible(m).inset + 24 });
 
   // create the map once
   useEffect(() => {
@@ -197,11 +198,11 @@ export function MapView(props: Props) {
   return (
     <>
       <div ref={box} className="map" />
-      {failed && <div className="nomap">The map could not be loaded ({failed}). Use the buttons above to switch between city, district, county and state results.</div>}
+      {failed && <div className="nomap">The map could not be loaded ({failed}).</div>}
       {map && overlay && createPortal(
         <>
           <WardLabels map={map} geo={props.geo} elected={berkeleyInView ? props.elected : new Set()} activeWard={props.activeWard} />
-          <CardLayer map={map} cards={props.cards} rightInset={window.innerWidth > 860 ? props.rightInset : 0} activeWard={props.activeWard} onCard={props.onCard} />
+          <CardLayer map={map} cards={props.cards} rightInset={window.innerWidth > 860 ? props.rightInset : 0} bottomInset={props.bottomInset} activeWard={props.activeWard} onCard={props.onCard} />
           <div ref={tip} className="maptip" aria-hidden="true" />
         </>, overlay)}
     </>

@@ -312,7 +312,7 @@ function updateChain(level, id) {
   if (level === "state") { /* nothing above */ }
 }
 function select(level, id, fit = true) {
-  if (level === "county") id = "alameda"; if (level === "state") id = "CA";
+  if (level === "county") id = "rtm"; if (level === "state") id = "CA";
   const f = featureById(level, id); if (!f && level !== "state" && level !== "county") return;
   view = { level, id: String(id) };
   if (!(level === "city" && view.id === "Berkeley")) activeWard = null;
@@ -638,10 +638,10 @@ function bubbleSpecs() {
     const m = D.rtm ? D.rtm.total : rtmA, rule = D.rtm ? D.rtm.rule : rtmA.rule;
     const meta = D.rtm ? `5-county total · ${D.rtm.counties_in} of 5 in` : "Alameda County";
     const base = { measure: m, ...leadMeasure(m, rule), title: "Measure RTM", focus: D.rtm ? "rtm" : "race-" + rtmA.id };
-    push({ ...base, key: "rtm-county", scope: "county", area: ["county", "alameda"], ll: ll("county", "alameda"), tag: "Measure RTM · 5 counties", meta, prio: 1, go: ["county", "alameda"] });
+    push({ ...base, key: "rtm-county", scope: "county", area: ["county", "rtm"], ll: ll("county", "rtm"), tag: "Measure RTM · 5 counties", meta, prio: 1, go: ["county", "rtm"] });
     push({ ...base, key: "rtm-berkeley", scope: "city", area: ["city", HOME], ll: ll("city", HOME), tag: "Measure RTM", short: "Measure RTM", cityName: HOME, meta, prio: 5, go: ["city", HOME] });
   }
-  if (g?.alameda) push({ key: "gov-alameda", scope: "county", area: ["county", "alameda"], ll: ll("county", "alameda"), title: "Governor", tag: "Governor · Alameda Co.", meta: "Alameda Co.", ...gov(g.alameda), prio: 2, focus: "gov-alameda", go: ["county", "alameda"] });
+  if (g?.alameda) push({ key: "gov-alameda", scope: "county", area: ["county", "rtm"], ll: ll("county", "rtm"), title: "Governor", tag: "Governor · Alameda Co.", meta: "Alameda Co.", ...gov(g.alameda), prio: 2, focus: "gov-alameda", go: ["county", "rtm"] });
   const byCity = {};
   for (const r of D.races || []) {
     const base = { race: r, people: r.kind === "measure" ? null : r.rows, measure: r.kind === "measure" ? r : null, ...leadRace(r), focus: "race-" + r.id };
@@ -800,7 +800,7 @@ function indexCityDistricts() {
 /* ================= level buttons ================= */
 function renderLevels() {
   const box = document.getElementById("levels");
-  const ent = { city: chain.city, congress: chain.congress, county: "alameda", state: "CA" };
+  const ent = { city: chain.city, congress: chain.congress, county: "rtm", state: "CA" };
   box.replaceChildren(...LEVELS.map(level => {
     const id = ent[level];
     const name = level === "congress" ? (id ? "District " + id : "—") : id ? nameOf(level, id) : "—";
@@ -985,7 +985,7 @@ function header(kicker, title, crumbs) {
 const racesFor = pred => (DATA.races || []).filter(pred);
 function cityPanel(name) {
   const f = anchor(featureById("city", name)), cd = featureAt("congress", f[0], f[1]);
-  const out = [header("City", name, [...(cd ? [[`Congressional District ${cd.properties.id}`, "congress", cd.properties.id]] : []), ["Alameda County", "county", "alameda"], ["California", "state", "CA"]])];
+  const out = [header("City", name, [...(cd ? [[`Congressional District ${cd.properties.id}`, "congress", cd.properties.id]] : []), ["Bay Area", "county", "rtm"], ["California", "state", "CA"]])];
   const rs = racesFor(r => r.group === "city" && r.city === name);
   const meas = rs.filter(r => r.kind === "measure"), cands = rs.filter(r => r.kind !== "measure");
   if (meas.length) out.push(el("h2", {}, "Ballot measures"), ...meas.map(raceItem));
@@ -995,7 +995,7 @@ function cityPanel(name) {
   return out;
 }
 function congressPanel(id) {
-  const out = [header("Congress", `District ${id}`, [["Alameda County", "county", "alameda"], ["California", "state", "CA"]])];
+  const out = [header("Congress", `District ${id}`, [["Bay Area", "county", "rtm"], ["California", "state", "CA"]])];
   const rs = racesFor(r => r.group === "congress" && String(r.cd) === String(id));
   out.push(el("h2", {}, "U.S. House"), ...(rs.length ? rs.map(raceItem) : [el("p", { class: "empty" }, "This race has not appeared on the county’s results page yet.")]));
   const cities = (GEO.cityAll?.features || []).filter(c => { const [x, y] = anchor(c); return featureAt("congress", x, y)?.properties.id === String(id); });
@@ -1093,7 +1093,7 @@ async function main() {
   // URL hash: #city=Berkeley, #congress=12, #county, #state
   const m = location.hash.match(/^#(city|congress|county|state)(?:=(.+))?$/);
   if (m) {
-    const id = m[1] === "county" ? "alameda" : m[1] === "state" ? "CA" : decodeURIComponent(m[2] || "");
+    const id = m[1] === "county" ? "rtm" : m[1] === "state" ? "CA" : decodeURIComponent(m[2] || "");
     if (featureById(m[1], id)) view = { level: m[1], id };
   }
   updateChain(view.level, view.id);

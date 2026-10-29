@@ -11,8 +11,12 @@ export const Avatar = memo(function Avatar({ name, size = 22 }: { name: string; 
   );
 });
 
-/** Square photo tile for the map cards. */
-export const Tile = memo(function Tile({ name, lead }: { name: string; lead?: boolean }) {
+/** Round photo tile for the map cards; a called winner gets a check. */
+export const Tile = memo(function Tile({ name, lead, won }: { name: string; lead?: boolean; won?: boolean }) {
   const src = headshotOf(name);
-  return <span className={"pt" + (lead ? " lead" : "")} title={name}>{src ? <img src={src} alt="" loading="lazy" /> : initials(name)}</span>;
+  return (
+    <span className={"ptw" + (won ? " won" : "")}>
+      <span className={"pt" + (lead ? " lead" : "")} title={name}>{src ? <img src={src} alt="" loading="lazy" /> : initials(name)}</span>
+    </span>
+  );
 });

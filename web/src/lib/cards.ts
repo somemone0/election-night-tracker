@@ -1,9 +1,10 @@
-// Race cards on the map (styled after meetvc.cafe's café cards). Each card is a race, anchored to the area it covers:
-// statewide races on California, county races on Alameda County, House races on their district, city races on the city,
+// Race cards (styled after meetvc.cafe's café cards). Each card is a race, anchored to the area it covers: statewide races
+// on California, Measure RTM and county measures on the Bay Area shape, CA-12 on its district, city races on the city,
 // and Berkeley council races on their council district. Zoomed out, a city's races fold into one stacked "cluster" card.
-// Pure functions: which cards exist (cardSpecs) and which show in a view (visibleCards).
-import { CONFIG, HOME } from "../config";
-import type { Geo, MeasureCount, Race, Results, Row, View } from "../types";
+// In Berkeley, every race on the ballot is also in the scrolling strip along the bottom of the map (stripCards).
+// Pure functions: which cards exist (cardSpecs), which show on the map in a view (visibleCards), and the strip.
+import { CONFIG, HOME, HOME_COUNTY } from "../config";
+import type { Call, Geo, MeasureCount, Race, Results, Row, View } from "../types";
 import { anchor, featureById } from "./geo";
 import { cleanTitle, isChoice, last, pct, threshold } from "./format";
 
@@ -16,7 +17,7 @@ export interface CardSpec extends Lead {
   ll: [number, number];          // [lng, lat]
   title: string; tag: string; meta: string;
   prio: number;                  // lower = placed first
-  focus: string | null;          // id of the results-panel item a click scrolls to
+  focus: string | null;          // the race a click selects for the detail panel (see panels/Detail.tsx for the ids)
   go: View;                      // where a click takes the map
   people?: Row[] | null;
   measure?: MeasureCount | null;
@@ -24,6 +25,8 @@ export interface CardSpec extends Lead {
   cityName?: string;
   parent?: string;               // the cluster card this card folds into when zooming out (used for the transition)
   more?: boolean; moreCount?: number;
+  call?: Call | null;            // the race has been called (calls.py)
+  pin?: boolean;                 // sits centered on its point, never moved (council districts)
 }
 
 export const WARD_RE = /City Council, District (\d+)/;
@@ -70,28 +73,29 @@ export function cardSpecs(D: Results | null, geo: Geo | null): CardSpec[] {
   };
   const push = (s: Omit<CardSpec, "ll"> & { ll: [number, number] | null }) => { if (s.ll) specs.push(s as CardSpec); };
   const h = D.headline, g = D.contests?.governor;
-  const gov = (c: { candidates: Row[]; total: number }) => ({ people: c.candidates, ...leadRows(c.candidates, c.total) });
-  const STATE: View = { level: "state", id: "CA" }, COUNTY: View = { level: "county", id: "alameda" };
+  const gov = (c: { candidates: Row[]; total: number; call?: Call }) => ({ people: c.candidates, ...leadRows(c.candidates, c.total), call: c.call });
+  const STATE: View = { level: "state", id: "CA" }, COUNTY: View = { level: "county", id: HOME_COUNTY };
 
-  if (h?.state) push({ key: "p40-state", scope: "state", area: ["state", "CA"], ll: ll("state", "CA"), title: "Prop 40", tag: "Prop 40 · Statewide", meta: "Statewide", measure: h.state, ...leadMeasure(h.state), prio: 1, focus: "p40", go: STATE });
-  if (g?.state) push({ key: "gov-state", scope: "state", area: ["state", "CA"], ll: ll("state", "CA"), title: "Governor", tag: "Governor", meta: "Statewide", ...gov(g.state), prio: 2, focus: "gov-state", go: STATE });
+  if (h?.state) push({ key: "p40-state", scope: "state", area: ["state", "CA"], ll: ll("state", "CA"), title: "Prop 40", tag: "Prop 40 · Statewide", meta: "Statewide", measure: h.state, ...leadMeasure(h.state), call: h.state.call, prio: 1, focus: "p40", go: STATE });
+  if (g?.state) push({ key: "gov-state", scope: "state", area: ["state", "CA"], ll: ll("state", "CA"), title: "Governor", tag: "Governor", meta: "Statewide", ...gov(g.state), prio: 2, focus: "gov", go: STATE });
 
   const rtmA = rtmRace(D);
   if (D.rtm || rtmA) {   // the five-county total when the tracker has it, else Alameda's own count
     const m: MeasureCount = D.rtm ? D.rtm.total : (rtmA as MeasureCount & Race);
     const rule = D.rtm ? D.rtm.rule : rtmA!.rule;
-    const meta = D.rtm ? `5-county total · ${D.rtm.counties_in} of 5 in` : "Alameda County";
-    const base = { measure: m, ...leadMeasure(m, rule), title: "Measure RTM", focus: D.rtm ? "rtm" : "race-" + rtmA!.id };
-    push({ ...base, key: "rtm-county", scope: "county", area: ["county", "alameda"], ll: ll("county", "alameda"), tag: "Measure RTM · 5 counties", meta, prio: 1, go: COUNTY });
+    const meta = D.rtm ? (D.rtm.complete ? "5-county total" : `5-county total · ${D.rtm.counties_in} of 5 in`) : "Alameda County";
+    const base = { measure: m, ...leadMeasure(m, rule), title: "Measure RTM", focus: D.rtm ? "rtm" : "race-" + rtmA!.id, call: D.rtm?.total.call };
+    push({ ...base, key: "rtm-county", scope: "county", area: ["county", HOME_COUNTY], ll: ll("county", HOME_COUNTY), tag: "Measure RTM · 5 counties", meta, prio: 1, go: COUNTY });
     push({ ...base, key: "rtm-berkeley", scope: "city", area: ["city", HOME], ll: ll("city", HOME), tag: "Measure RTM", cityName: HOME, parent: "cluster-" + HOME, meta, prio: 5, go: { level: "city", id: HOME } });
   }
-  if (g?.alameda) push({ key: "gov-alameda", scope: "county", area: ["county", "alameda"], ll: ll("county", "alameda"), title: "Governor", tag: "Governor · Alameda Co.", meta: "Alameda Co.", ...gov(g.alameda), prio: 2, focus: "gov-alameda", go: COUNTY });
 
   const byCity: Record<string, Race[]> = {};
   for (const r of D.races || []) {
-    const base = { people: r.kind === "measure" ? null : r.rows, measure: r.kind === "measure" ? r : null, ...leadRace(r), focus: "race-" + r.id };
-    if (r.group === "congress" && r.cd != null) {
-      push({ ...base, key: r.id, scope: "congress", area: ["congress", String(r.cd)], ll: ll("congress", r.cd), title: `CA-${r.cd}`, tag: `U.S. House · CA-${r.cd}`, meta: "U.S. House", prio: 1, go: { level: "congress", id: String(r.cd) } });
+    const base = { people: r.kind === "measure" ? null : r.rows, measure: r.kind === "measure" ? r : null, ...leadRace(r), call: r.call, focus: "race-" + r.id };
+    if (r.group === "county" && r.category === "Measures" && r !== rtmA) {   // county measures, on the Bay Area level with RTM
+      push({ ...base, key: r.id, scope: "county", area: ["county", HOME_COUNTY], ll: ll("county", HOME_COUNTY), title: shortRace(r), tag: `${shortRace(r)} · Alameda County`, meta: "Alameda County", prio: 2, go: COUNTY });
+    } else if (r.group === "congress" && r.cd != null) {
+      push({ ...base, key: r.id, scope: "congress", area: ["congress", String(r.cd)], ll: ll("congress", r.cd), title: `CA-${r.cd}`, tag: `U.S. House · CA-${r.cd}`, meta: "U.S. House", prio: 1, go: COUNTY });
     } else if (r.group === "city" && r.city && CONFIG.localCities.includes(r.city)) {
       (byCity[r.city] ||= []).push(r);
       const w = r.city === "Berkeley" && WARD_RE.exec(r.title);
@@ -105,21 +109,35 @@ export function cardSpecs(D: Results | null, geo: Geo | null): CardSpec[] {
   return specs;
 }
 
-export const CITY_CAP = 3;   // citywide cards shown at once; the rest go behind a "+N more races" chip
-
-export function visibleCards(all: CardSpec[], view: View, cityCd: Record<string, string>): CardSpec[] {
+export function visibleCards(all: CardSpec[], view: View): CardSpec[] {
   const L = view.level;
-  if (L === "state") return all.filter(s => s.scope === "state" || s.scope === "county");
-  if (L === "county") return all.filter(s => s.scope === "county" || s.scope === "congress" || (s.scope === "cluster" && s.cityName === HOME));
-  if (L === "congress") return all.filter(s => (s.scope === "congress" && s.area[1] === view.id) || (s.scope === "cluster" && cityCd[s.cityName!] === view.id));
-  let out = all.filter(s => (s.scope === "city" && s.area[1] === view.id) || (s.scope === "ward" && s.cityName === view.id));
-  const citywide = out.filter(s => s.scope === "city").sort((a, b) => a.prio - b.prio);
-  if (citywide.length > CITY_CAP) {
-    const keep = new Set(citywide.slice(0, CITY_CAP)), more = citywide.length - CITY_CAP;
-    out = out.filter(s => s.scope !== "city" || keep.has(s));
-    out.push({ key: "more-" + view.id, scope: "city", more: true, moreCount: more, area: ["city", view.id], ll: citywide[0].ll, title: "", tag: "", meta: "",
-      who: `+${more} more races`, margin: 0, votes: 0, sub: null, prio: citywide[CITY_CAP - 1].prio + 0.01, go: view, focus: null, parent: "cluster-" + view.id });
-  }
+  if (L === "state") return all.filter(s => s.scope === "state" || (s.scope === "county" && s.key === "rtm-county"));
+  // the Bay Area: RTM and county measures on the five counties, CA-12 (the only district with a boundary) and Berkeley's cluster
+  if (L === "county" || L === "congress") return all.filter(s => s.scope === "county" || s.scope === "congress" || (s.scope === "cluster" && s.cityName === HOME));
+  // a city: council districts stay centered on their district; everything else is in the strip along the bottom
+  return all.filter(s => s.scope === "ward" && s.cityName === view.id).map(s => ({ ...s, pin: true }));
+}
+
+/** Every race on a Berkeley ballot, in ballot-ish order: council, other city offices, city measures, RTM, the House,
+ *  county measures, then statewide (Prop 40, governor, the other propositions). */
+export function stripCards(all: CardSpec[], D: Results | null): CardSpec[] {
+  if (!D) return [];
+  const wardN = (s: CardSpec) => Number(s.area[1]);
+  const city = all.filter(s => s.cityName === HOME && s.scope !== "cluster" && s.key !== "rtm-berkeley");
+  const out = [
+    ...city.filter(s => s.scope === "ward").sort((a, b) => wardN(a) - wardN(b)),
+    ...city.filter(s => s.scope === "city" && !s.measure),
+    ...city.filter(s => s.scope === "city" && s.measure),
+    ...all.filter(s => s.key === "rtm-berkeley"),
+    ...all.filter(s => s.scope === "congress"),
+    ...all.filter(s => s.scope === "county" && s.key !== "rtm-county"),
+    ...all.filter(s => s.scope === "state"),
+  ];
+  const ll = all.find(s => s.scope === "state")?.ll ?? [-119.5, 37.2];
+  const props = D.state_measures.filter(m => m.number !== D.headline?.number).sort((a, b) => Number(a.number) - Number(b.number));
+  for (const m of props)
+    out.push({ key: "prop-" + m.number, scope: "state", area: ["state", "CA"], ll, title: `Prop ${m.number}`, tag: `Prop ${m.number} · Statewide`, meta: "Statewide",
+      measure: m.state, ...leadMeasure(m.state), call: m.state.call, prio: 3, focus: "prop-" + m.number, go: { level: "state", id: "CA" } });
   return out;
 }
 
@@ -132,4 +150,5 @@ export function electedWards(D: Results | null) {
 
 /** Changes whenever anything a card shows changes; cheap to compare. */
 export const cardSig = (s: CardSpec) =>
-  [s.key, s.who, s.margin.toFixed(1), s.votes, s.sub, s.meta, s.races?.length ?? 0, s.measure ? `${s.measure.yes}/${s.measure.no}` : "", (s.people || []).map(p => p.votes).join(",")].join("~");
+  [s.key, s.who, s.margin.toFixed(1), s.votes, s.sub, s.meta, s.races?.length ?? 0, s.measure ? `${s.measure.yes}/${s.measure.no}` : "", (s.people || []).map(p => p.votes).join(","),
+    s.call ? s.call.winners.join("+") : "", s.races?.filter(r => r.call).length ?? 0].join("~");

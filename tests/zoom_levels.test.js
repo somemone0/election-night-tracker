@@ -30,11 +30,12 @@ const order = seq("Berkeley").map(s => s.split(":")[0]);
 assert.deepStrictEqual([...new Set(order)], ["state", "county", "congress", "city"]);
 assert.strictEqual(levelsAt("Berkeley", 13), "city:Berkeley");
 assert.strictEqual(levelsAt("Berkeley", 11), "congress:12");
-assert.strictEqual(levelsAt("Berkeley", 9), "county:alameda");
-assert.strictEqual(levelsAt("Livermore", 11), "congress:14");   // districts other than 12 work too
-assert.strictEqual(levelsAt("Livermore", 13), "congress:14");   // other cities have no city level; you stay on the district
-assert.strictEqual(levelsAt("Fremont", 14), "congress:14");
-// outside the county the band falls back to the state
-const sf = vm.runInContext(`viewFromBand({lat:37.77,lng:-122.45},11)`, ctx);
-assert.strictEqual(sf.level, "state");
+assert.strictEqual(levelsAt("Berkeley", 9), "county:rtm");
+// only CA-12 and Berkeley are on the map now, so elsewhere in Alameda County you stay on the county
+assert.strictEqual(levelsAt("Livermore", 11), "county:rtm");
+assert.strictEqual(levelsAt("Livermore", 13), "county:rtm");
+assert.strictEqual(levelsAt("Fremont", 14), "county:rtm");
+// outside the five RTM counties the band falls back to the state (Sacramento)
+const sac = vm.runInContext(`viewFromBand({lat:38.58,lng:-121.49},11)`, ctx);
+assert.strictEqual(sac.level, "state");
 console.log("ok");

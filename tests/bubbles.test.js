@@ -29,8 +29,8 @@ assert(tags(state).includes("Prop 40 · Statewide") && tags(state).includes("Gov
 assert(!tags(state).some(x => /Prop 40 · Alameda/.test(x)), "no Alameda Prop 40 card");
 assert(tags(state).includes("Measure RTM · 5 counties"), "state view also shows Measure RTM");
 
-const county = at("county", "alameda");
-assert.strictEqual(county.filter(s => s.scope === "congress").length, 4, "county view shows all four House races");
+const county = at("county", "rtm");
+assert.strictEqual(county.filter(s => s.scope === "congress").length, 1, "county view shows CA-12, the only House district on the map");
 assert(tags(county).includes("Governor · Alameda Co."));
 assert(tags(county).includes("Measure RTM · 5 counties"), "RTM card at county level");
 const rc = county.find(s => s.key === "rtm-county");
@@ -55,7 +55,7 @@ assert(berk.filter(s => s.scope === "ward").every(s => s.people && s.people.leng
 
 const oak = at("city", "Oakland");
 assert(!oak.length, "other cities get no cards");
-assert(!at("county", "alameda").some(s => s.scope === "cluster" && s.cityName !== "Berkeley"));
+assert(!at("county", "rtm").some(s => s.scope === "cluster" && s.cityName !== "Berkeley"));
 
 const d4 = berk.find(s => s.tag === "Council · D4");
 assert(d4.who && d4.margin > 0 && d4.votes > 0, JSON.stringify(d4));
@@ -69,7 +69,7 @@ const rb = at("city", "Berkeley");
 const rw = rb.filter(s => s.scope === "ward");
 assert.strictEqual(rw.length, 4, "council cards exist with no votes");
 assert(rw.every(s => !s.who && s.people.length >= 2), "no leader yet, candidates listed");
-assert(at("county", "alameda").some(s => s.scope === "cluster" && s.cityName === "Berkeley"));
+assert(at("county", "rtm").some(s => s.scope === "cluster" && s.cityName === "Berkeley"));
 
 // headshots resolve from names (middle initials, quotes, apostrophes)
 for (const [name, ok] of [["Steve Kromer", true], ["Igor A. Tregub", true], ["Majdi 'Gaith' Abuhamdieh", true], ["Shoshana O'Keefe", true], ["Lateefah Simon", false]])

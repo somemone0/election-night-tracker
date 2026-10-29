@@ -8,8 +8,9 @@ site/index.html
 # Live results written by tracker.py
 site/data/
 
-# Election-night hand entries (copy from rtm_manual.example.json)
+# Election-night hand entries (copy from rtm_manual.example.json and calls.example.json)
 rtm_manual.json
+calls.json
 
 # Python
 __pycache__/
