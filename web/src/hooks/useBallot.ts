@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { CONFIG } from "../config";
 
-export interface BallotText { question: string; source?: string }
+export interface BallotText { question: string; source?: string; short?: string }   // short: the broadcast's one-line label
 export type Ballot = Record<string, BallotText>;
 
 /** "Bond Measure U - City of Berkeley" -> "Measure U"; "Prop 40" stays. Keys in measures.json use this form. */
@@ -16,7 +16,8 @@ export function useBallot(): Ballot {
       const out: Ballot = {};
       for (const [k, v] of Object.entries((j && j.measures) || {})) {
         const t = v as Partial<BallotText>;
-        if (typeof t?.question === "string" && t.question.trim()) out[k] = { question: t.question.trim(), source: typeof t.source === "string" ? t.source : undefined };
+        const question = typeof t?.question === "string" ? t.question.trim() : "", short = typeof t?.short === "string" ? t.short.trim() : "";
+        if (question || short) out[k] = { question, source: typeof t.source === "string" && t.source ? t.source : undefined, short: short || undefined };
       }
       setB(out);
     }).catch(() => {});

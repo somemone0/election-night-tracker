@@ -13,11 +13,12 @@ import { type CameraRequest, MapView } from "./map/MapView";
 import { defaultSelection } from "./panels/Detail";
 import { ResultsPanel } from "./panels/ResultsPanel";
 import type { BBox, Geo, Level, View } from "./types";
+import { S } from "./strings";
 
 export default function App() {
   const feed = useResults();
   const { geo, error: geoError } = useGeo();
-  if (!geo) return <Shell feed={feed} message={geoError ? `Loading map boundaries… (${geoError})` : "Loading…"} />;
+  if (!geo) return <Shell feed={feed} message={geoError ? S.loadingBoundaries(geoError) : S.loadingAll} />;
   return <Tracker geo={geo} feed={feed} />;
 }
 
@@ -59,11 +60,11 @@ function Tracker({ geo, feed }: { geo: Geo; feed: ReturnType<typeof useResults> 
     history.replaceState(null, "", viewToHash(view));
   }, [view]);
 
-  // the results card covers the right of the map on wide screens
+  // the race column covers the right of the map on wide screens
   useLayoutEffect(() => {
     const el = panelRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => setInset(el.offsetWidth + 36));
+    const ro = new ResizeObserver(() => setInset(el.offsetWidth + 1));
     ro.observe(el);
     return () => ro.disconnect();
   }, [!!D]);   // eslint-disable-line react-hooks/exhaustive-deps
@@ -112,7 +113,7 @@ function Tracker({ geo, feed }: { geo: Geo; feed: ReturnType<typeof useResults> 
 
   const onZoomView = useCallback((v: View) => setView(v), []);
 
-  const names = { city: chain.city ? nameOf(geo, "city", chain.city) : null, congress: null, county: nameOf(geo, "county", chain.county), state: "California" };
+  const names = { city: chain.city ? nameOf(geo, "city", chain.city) : null, congress: null, county: nameOf(geo, "county", chain.county), state: S.california };
   const onLevel = (l: Level) => go(l, l === "city" ? chain.city : l === "county" ? chain.county : "CA");
   const right = window.innerWidth > 860 ? inset : 0;
 
@@ -120,8 +121,8 @@ function Tracker({ geo, feed }: { geo: Geo; feed: ReturnType<typeof useResults> 
     <>
       <TopBar feed={feed} view={view} names={names} onLevel={onLevel} />
       <div className="app">
-        <section className="mapcol" aria-label="Map of results by area">
-          <ErrorBoundary label="the map">
+        <section className="mapcol" aria-label={S.mapLabel}>
+          <ErrorBoundary label={S.partMap}>
             <MapView geo={geo} view={view} camera={camera} cards={D ? cards : []} elected={elected} activeWard={activeWard} rightInset={inset} bottomInset={inBerkeley ? stripH : 0}
               onZoomView={onZoomView} onPick={go} onWard={selectWard} onCard={onCard} />
           </ErrorBoundary>
@@ -130,8 +131,8 @@ function Tracker({ geo, feed }: { geo: Geo; feed: ReturnType<typeof useResults> 
         </section>
         <div className="sidecol">
           <Banners feed={feed} />
-          {D ? <ResultsPanel ref={panelRef} D={D} history={feed.history} view={view} sel={sel} ballot={ballot} />
-            : <aside className="results" ref={panelRef}><p className="empty">{feed.error ?? "Loading results…"}</p></aside>}
+          {D ? <ResultsPanel ref={panelRef} D={D} history={feed.history} sel={sel} ballot={ballot} />
+            : <aside className="results" ref={panelRef}><p className="empty">{feed.error ?? S.loadingResults}</p></aside>}
         </div>
       </div>
     </>

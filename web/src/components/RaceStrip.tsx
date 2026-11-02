@@ -4,6 +4,7 @@ import { memo, useEffect, useRef } from "react";
 import { DISTRICT_COLORS } from "../config";
 import type { CardSpec } from "../lib/cards";
 import { CardBody, cardClass, cardLabel } from "../map/Card";
+import { S } from "../strings";
 
 export interface RaceStripProps {
   cards: CardSpec[];
@@ -50,7 +51,7 @@ export const RaceStrip = memo(function RaceStrip({ cards, selected, activeWard, 
 
   return (
     <div ref={box} className={"strip" + (show ? " on" : "")} style={{ right: rightInset }} aria-hidden={!show || undefined}>
-      <div className="striprow" ref={row} role="list" aria-label="Every race on Berkeley ballots">
+      <div className="striprow" ref={row} role="list" aria-label={S.stripLabel}>
         {cards.map(s => (
           <div role="listitem" key={s.key} className="stripitem">
             <button type="button" data-sel={s.focus ?? undefined} tabIndex={show ? 0 : -1} aria-label={cardLabel(s)} aria-pressed={s.focus === selected}

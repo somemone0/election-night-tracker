@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from "react";
 import { CONFIG } from "../config";
 import type { HistoryPoint, Results } from "../types";
+import { S } from "../strings";
 
 export interface Feed {
   data: Results | null;
@@ -41,7 +42,7 @@ export function useResults(): Feed {
           getJson<unknown>(CONFIG.results, ctl.signal),
           getJson<HistoryPoint[]>(CONFIG.history, ctl.signal).catch(() => null),
         ]);
-        if (!looksLikeResults(res)) throw new Error("results.json is not in the expected format");
+        if (!looksLikeResults(res)) throw new Error(S.resultsBadFormat);
         failures = 0;
         if (alive) setFeed(prev => ({
           // keep the same object when nothing changed, so nothing downstream re-renders
@@ -51,8 +52,8 @@ export function useResults(): Feed {
         }));
       } catch (e) {
         failures++;
-        const msg = location.protocol === "file:" ? "Open through a web server (python3 tracker.py --serve 8077)"
-          : (e as Error).name === "AbortError" ? "results.json timed out" : (e as Error).message;
+        const msg = location.protocol === "file:" ? S.needServer
+          : (e as Error).name === "AbortError" ? S.resultsTimedOut : (e as Error).message;
         if (alive) setFeed(prev => ({ ...prev, error: msg }));
       } finally {
         window.clearTimeout(to);

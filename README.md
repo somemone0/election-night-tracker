@@ -53,22 +53,20 @@ How it stays stable on election night:
 * **Map:** MapLibre GL draws every boundary on the GPU (no SVG redraws), and the map is created once. Cards follow
   the map in the same frame it draws, and only re-lay out once it stops, so nothing flashes or lags.
 
-How levels transition:
-* **Map:** finer boundaries fade in with zoom. The highlighted "area in view" cross-fades from the old area to the new one.
-* **Cards:** cards that stay keep their place. Going from district to city, Berkeley's stacked cluster card opens into
-  its races (they fly out of it); going back, they fly into it. New cards wait until a camera move finishes, then
-  animate into their laid-out spots.
-* **Results card:** the old race slides out as the new one slides in, up when zooming in, down when zooming out, and
-  a cross-fade between races at the same level.
+How levels transition: the map's camera moves and finer boundaries fade in with zoom; everything else changes at
+once, like turning a page. Cards and the race column have no animation (cards that stay keep their place).
 
 Code map: `src/lib/` (pure logic: geometry, zoom bands, which cards show, card layout), `src/map/` (MapLibre layers,
 card layer), `src/panels/` (the race detail), `src/components/` (results blocks, the strip), `src/hooks/` (data loading), `src/config.ts` (settings).
 
-Race cards sit on the map, styled after meetvc.cafe's café cards: a dark card per race with the candidates' headshot
-tiles (leader ringed), and a white chip with the leader's margin in points; the card line gives the vote lead, and a
-red border marks races within 3 points. Cards anchor to the area a race covers (California, a county, CA-12, the
+Wording: every label, note and message the tracker and the broadcast show is in `web/src/strings.js` (names, race
+titles and ballot text come from the data). Edit it and rebuild. Entries that are functions fill in numbers or names.
+
+Race cards sit on the map: a square black card per race with the candidates' headshots (leader ringed) and the
+leader's margin in points as plain text; the card line gives the vote lead, and a red border marks races within 3
+points. Cards anchor to the area a race covers (California, a county, CA-12, the
 city, or one of Berkeley's eight council districts). The Bay Area shape carries the Measure RTM five-county total. Zoomed out, each city's races fold into one stacked
-"cluster" card with a "×N" badge (Berkeley's, at the Bay Area level). Cards
+"cluster" card (Berkeley's, at the Bay Area level). Cards
 slide sideways, stack, or drop below their point so they never overlap; clicking one jumps to the race (or zooms into
 the city). In Berkeley, each council district's card is a compact tab (leader and margin) pinned to the center of its
 district, and every race is in the strip along the bottom. Called races get a green check (see "Race calls"). Headshots come from `site/img/headshots/<first-last>.png`; anyone without one gets initials.
@@ -96,11 +94,14 @@ Look and feel: white on black, like a chalkboard. California, the counties and C
 is the only place with streets, drawn white over its eight council districts in the colors and grain of the Daily Cal's
 "Berkeley District Cutouts" graphics (`DISTRICT_COLORS` in `web/src/config.ts`). Only districts with a race this year
 are colored (the rest are left clear, just a faint outline), and council races carry their district's color on their
-cards and in the results panel. Two-way bars use white and grey, so no party colors are implied; close races get red.
+cards and in the race column. The page is set like a results page in print: hairline rules instead of boxes, square
+corners, no shadows, and an AP-style table per race (check, candidate, votes, pct.) with the leader or winners in bold.
+Calls are a sentence ("✓ Simon wins. Called by The Daily Californian at 11:42 p.m. Nov. 4."), and times are AP style.
+No party colors; close races get red.
 
-Type follows the rent-o-meter: Tiempos Headline Bold for headings and Plantin for text, in sentence case. Both are
-licensed, so their files are not in this project: put `tiempos-headline-bold.woff2` and `plantin-regular.woff2` in
-`site/fonts/` (only if the Daily Cal's license covers this site) and redeploy; until then Newsreader stands in.
+Type follows the rent-o-meter: Tiempos Headline Bold for headings and Plantin for text, in sentence case. The
+Daily Cal's files are in `site/fonts/` (`tiempos-headline-bold.woff2`, `plantin-regular.woff2`, copied from the
+rent-o-meter); there is no italic cut, so the page uses none.
 Text on the page is kept to what the results need: no explainers or flavor text.
 
 ## Measure RTM across all five counties
@@ -214,6 +215,29 @@ calls.example.json  template for desk calls and outstanding-ballot counts
 fixtures/         county page structure and SoS measure list the mock is built from
 tests/            parser, mock-consistency, failure-handling and race-call tests
 ```
+
+## Instagram Live (broadcast.html)
+
+`broadcast.html` is a 1080x1920 results loop for Instagram Live, paced like the Daily Cal's "dc26 full cycle" video
+and set like the website (chalkboard black, Tiempos and Plantin, hairline rules, council districts in their cutout
+colors): City Council (with the rent board), Berkeley measures, the school board, Measure RTM (Bay Area) and the state
+(governor, CA-12, propositions), about 8 seconds each. Rows come in one after another with their numbers counting up,
+and the section tabs under the DC'26 logo show the loop. It reads the same `data/results.json` as the site, so it updates
+itself. As in the site's tables, ✓ marks a called winner, leaders are bold and the rest muted; the red tick on a
+measure's bar is what it needs to pass. Candidates get a (D)/(R) only when every candidate shown has a party.
+
+The video's National slide (House and Senate balance) is left out: none of our sources has national results.
+
+* `site/broadcast.json` (no rebuild): `slideSeconds`, `stateProps` (propositions on the State slide; Prop 40 is always
+  there), and `parties` for candidates the feeds don't give a party.
+* `site/measures.json`: each measure's one-line `short` label.
+* URL options: `?slide=2` holds one slide, `?seconds=5` changes the slide length, `?still=1` turns off the animation
+  (for screenshots and static graphics, e.g. headless Chrome with `--window-size=1080,1920 --screenshot`).
+
+To stream: in OBS, set the canvas and output to 1080x1920, add a Browser source at
+`https://election-tracker-385939155005.us-west1.run.app/broadcast.html` (1080x1920), then on instagram.com (a
+professional account) choose Create, then Live, paste the server URL and stream key into OBS, Start Streaming, and
+Go Live. Instagram ends a live stream after about four hours, so plan one restart.
 
 ## Cloud Run
 

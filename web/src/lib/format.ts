@@ -1,3 +1,4 @@
+import { S } from "../strings";
 import type { Call, MeasureCount, Precincts } from "../types";
 
 export const fmt = (n: number) => Number(n || 0).toLocaleString("en-US");
@@ -15,18 +16,30 @@ export function threshold(rule?: string | null) {
 }
 
 export function measureStatus(m: MeasureCount, rule?: string | null) {
-  if (!(m.yes + m.no)) return "No votes counted yet";
+  if (!(m.yes + m.no)) return S.noVotes;
   const th = threshold(rule);
-  if (th > 50) return `Yes at ${pct(m.yes_pct)}, needs ${pct(th, th % 1 ? 1 : 0)}`;
-  if (m.leader === "tied") return "Tied";
-  return `${m.leader === "yes" ? "Yes" : "No"} leads by ${m.margin.toFixed(1)} pts`;
+  if (th > 50) return S.yesNeeds(pct(m.yes_pct), pct(th, th % 1 ? 1 : 0));
+  if (m.leader === "tied") return S.tied;
+  return S.sideLeads(m.leader === "yes" ? S.yes : S.no, m.margin.toFixed(1));
 }
 
 /** "Simon wins", "Ishii, Lunaparra win", "Passes", "Fails". */
 export function callText(c: Call, measure: boolean, short: (n: string) => string = n => n) {
-  if (measure) return c.winners[0] === "Yes" ? "Passes" : "Fails";
-  return `${c.winners.map(short).join(", ")} ${c.winners.length > 1 ? "win" : "wins"}`;
+  if (measure) return c.winners[0] === "Yes" ? S.passes : S.fails;
+  return S.wins(c.winners.map(short));
 }
 
-export const precinctMeta = (p?: Precincts | null) => (p ? `${fmt(p.done)} of ${fmt(p.total)} precincts` : null);
-export const progressText = (p?: Precincts | null) => (p ? `${pct(p.pct, p.pct % 1 ? 1 : 0)} of precincts reporting` : "");
+/** AP style: "9:42 p.m.", "10 a.m.", "noon", "midnight". */
+export function apTime(d: Date) {
+  const h = d.getHours(), m = d.getMinutes();
+  if (m === 0 && h === 12) return S.noon;
+  if (m === 0 && h === 0) return S.midnight;
+  return `${h % 12 || 12}${m ? ":" + String(m).padStart(2, "0") : ""} ${h < 12 ? S.am : S.pm}`;
+}
+/** AP style, time before date: "11:42 p.m. Nov. 4" */
+export const apDateTime = (d: Date) => `${apTime(d)} ${S.months[d.getMonth()]} ${d.getDate()}`;
+/** AP style numbers: one through nine spelled out. */
+export const apNum = (n: number) => (n >= 1 && n <= 9 ? S.digits[n] : fmt(n));
+
+export const precinctMeta = (p?: Precincts | null) => (p ? S.precincts(fmt(p.done), fmt(p.total)) : null);
+export const progressText = (p?: Precincts | null) => (p ? S.precinctsReporting(pct(p.pct, p.pct % 1 ? 1 : 0)) : "");

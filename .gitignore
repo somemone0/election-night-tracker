@@ -4,6 +4,7 @@ node_modules/
 # Build output (vite writes these into site/; rebuild with `npm run build` in web/)
 site/app/
 site/index.html
+site/broadcast.html
 
 # Live results written by tracker.py
 site/data/

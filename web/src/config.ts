@@ -1,7 +1,8 @@
+import { S } from "./strings";
 import type { Level, View } from "./types";
 
 export const CONFIG = {
-  masthead: "Election Night in Berkeley",   // title in the top bar
+  masthead: S.masthead,   // title in the top bar
   results: "data/results.json",
   history: "data/history.json",
   headshots: "img/headshots/index.json",
@@ -25,7 +26,7 @@ export const CONFIG = {
 // "congress" is not a level of its own any more: CA-12 is shown on the Bay Area level ("county"). Old #congress links land there.
 export const LEVELS: Level[] = ["city", "county", "state"];
 export const RANK: Record<Level, number> = { city: 0, congress: 1, county: 2, state: 3 };   // smaller = finer
-export const LEVEL_LABEL: Record<Level, string> = { city: "City", congress: "Congress", county: "Region", state: "State" };
+export const LEVEL_LABEL: Record<Level, string> = S.levels;
 export const HOME = CONFIG.start.id;   // the city this page is about; its cluster also shows at county level
 
 // Council district colors from the Daily Cal's "Berkeley District Cutouts" (fill, darker edge).

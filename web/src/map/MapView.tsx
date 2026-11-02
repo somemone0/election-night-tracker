@@ -13,6 +13,7 @@ import type { BBox, Geo, Level, View } from "../types";
 import { ActiveArea, addAreas, HIT_LAYERS, HIT_SOURCE, syncWards } from "./areas";
 import { firstStreetLayer, loadStyle } from "./basemap";
 import { CardLayer } from "./CardLayer";
+import { S } from "../strings";
 
 export interface CameraRequest { bbox: BBox; seq: number; instant?: boolean }
 
@@ -65,7 +66,7 @@ export function MapView(props: Props) {
           dragRotate: false, pitchWithRotate: false, touchPitch: false, attributionControl: false, fadeDuration: 0,
         });
       } catch (err) {
-        setFailed((err as Error).message || "WebGL is not available");
+        setFailed((err as Error).message || S.noWebgl);
         return;
       }
       m.touchZoomRotate.disableRotation();
@@ -140,7 +141,7 @@ export function MapView(props: Props) {
         if (!f) continue;
         const level = HIT_SOURCE[layer], id = String(f.properties.id);
         if (level === "ward") {
-          if (view.level === "city" && view.id === "Berkeley" && elected.has(id)) return { level, id, name: `District ${id}`, f };
+          if (view.level === "city" && view.id === "Berkeley" && elected.has(id)) return { level, id, name: S.district(id), f };
           continue;
         }
         if (RANK[level] <= RANK[view.level] && !(view.level === level && view.id === id)) return { level, id, name: String(f.properties.name), f };
@@ -198,7 +199,7 @@ export function MapView(props: Props) {
   return (
     <>
       <div ref={box} className="map" />
-      {failed && <div className="nomap">The map could not be loaded ({failed}).</div>}
+      {failed && <div className="nomap">{S.mapFailed(failed)}</div>}
       {map && overlay && createPortal(
         <>
           <WardLabels map={map} geo={props.geo} elected={berkeleyInView ? props.elected : new Set()} activeWard={props.activeWard} />

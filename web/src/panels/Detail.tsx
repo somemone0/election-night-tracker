@@ -6,6 +6,7 @@ import { type Ballot, ballotKey } from "../hooks/useBallot";
 import { type CardSpec, rtmRace, WARD_RE } from "../lib/cards";
 import { cleanTitle } from "../lib/format";
 import type { HistoryPoint, Results, View } from "../types";
+import { S } from "../strings";
 
 export interface DetailProps { D: Results; history: HistoryPoint[]; sel: string; ballot: Ballot }
 
@@ -22,32 +23,30 @@ interface Shown { kicker: string; title: string; ballot?: { key: string; fallbac
 function resolve(D: Results, history: HistoryPoint[], sel: string): Shown | null {
   if (sel === "p40") {
     const n = D.headline.number;
-    return { kicker: "California · statewide", title: `Proposition ${n}`, ballot: { key: `Prop ${n}`, fallback: D.headline.name }, body: <Prop40Block D={D} history={history} full /> };
+    return { kicker: S.california, title: S.proposition(n), ballot: { key: S.prop(n), fallback: D.headline.name }, body: <Prop40Block D={D} history={history} full /> };
   }
-  if (sel === "gov") return D.contests?.governor ? { kicker: "California · statewide", title: "Governor", body: <GovernorBlock D={D} /> } : null;
-  if (sel === "rtm") return D.rtm || rtmRace(D) ? { kicker: "Five Bay Area counties", title: "Measure RTM", ballot: { key: "Measure RTM" }, body: <RtmBlock D={D} /> } : null;
+  if (sel === "gov") return D.contests?.governor ? { kicker: S.california, title: S.governor, body: <GovernorBlock D={D} /> } : null;
+  if (sel === "rtm") return D.rtm || rtmRace(D) ? { kicker: S.rtmCounties, title: S.measureRtm, ballot: { key: S.measureRtm }, body: <RtmBlock D={D} /> } : null;
   if (sel.startsWith("prop-")) {
     const m = D.state_measures.find(x => "prop-" + x.number === sel);
-    return m ? { kicker: "California · statewide", title: `Proposition ${m.number}`, ballot: { key: `Prop ${m.number}`, fallback: m.name }, body: <PropBlock m={m} /> } : null;
+    return m ? { kicker: S.california, title: S.proposition(m.number), ballot: { key: S.prop(m.number), fallback: m.name }, body: <PropBlock m={m} /> } : null;
   }
   const r = D.races.find(x => "race-" + x.id === sel);
   if (!r) return null;
   const ward = r.city === "Berkeley" ? WARD_RE.exec(r.title)?.[1] : undefined;
-  const kicker = r.group === "city" ? [r.city, ward ? `Council District ${ward}` : r.kind === "measure" ? "City measure" : "Citywide", r.rcv ? "Ranked choice" : ""].filter(Boolean).join(" · ")
-    : r.group === "congress" ? `U.S. House · ${r.cd === 12 || r.cd === "12" ? "includes Berkeley" : "Alameda County"}`
-    : r.kind === "measure" ? "Alameda County measure" : "Alameda County";
-  const title = r.group === "congress" ? `U.S. House, District ${r.cd}`
+  const kicker = r.group === "city" ? r.city ?? "" : r.group === "congress" && String(r.cd) === "12" ? S.includesBerkeley : S.alamedaCounty;
+  const title = r.group === "congress" ? S.house(r.cd)
     : r.kind === "measure" ? r.title.replace(/\s*-\s.*$/, "")
-    : ward ? `City Council, District ${ward}`
+    : ward ? S.councilDistrict(ward)
     : (r.group === "city" ? cleanTitle(r.title) || r.title : r.title.replace(/\s*\(RCV\)\s*$/, "")).replace(/^Members?,\s*/, "");
-  return { kicker, title, ballot: r.kind === "measure" ? { key: ballotKey(r.title) } : undefined, body: <RaceItem r={r} detail /> };
+  return { kicker, title, ballot: r.kind === "measure" ? { key: ballotKey(r.title) } : undefined, body: <RaceItem r={r} /> };
 }
 
 export function Detail({ D, history, sel, ballot }: DetailProps) {
   const s = resolve(D, history, sel);
-  if (!s) return <p className="empty">Pick a race on the map.</p>;
+  if (!s) return <p className="empty">{S.pickRace}</p>;
   const text = s.ballot ? ballot[s.ballot.key] : undefined;
-  const question = text?.question ?? s.ballot?.fallback?.trim();
+  const question = text?.question || s.ballot?.fallback?.trim();
   return (
     <>
       <div className="rhead">
@@ -57,16 +56,16 @@ export function Detail({ D, history, sel, ballot }: DetailProps) {
       {s.body}
       {question && (
         <div className="ballot">
-          <h2>On the ballot</h2>
+          <h2>{S.onTheBallot}</h2>
           <p>{question}</p>
-          {!text && <div className="note">Ballot label from the Secretary of State.</div>}
-          {text?.source && <div className="note"><a href={text.source} rel="noopener">Source</a></div>}
+          {!text?.question && <div className="note">{S.sosLabel}</div>}
+          {text?.source && <div className="note"><a href={text.source} rel="noopener">{S.source}</a></div>}
         </div>
       )}
       <div className="foot">
-        Unofficial results. Sources:{" "}
-        <a href="https://www.sos.ca.gov/elections/prior-elections/statewide-election-results" rel="noopener">California Secretary of State</a>,{" "}
-        <a href="https://acvote.alamedacountyca.gov/" rel="noopener">Alameda County Registrar of Voters</a>, RTM county registrars.
+        {S.sourcesLead}{" "}
+        {S.sources.map(x => <span key={x.href}><a href={x.href} rel="noopener">{x.text}</a>,{" "}</span>)}
+        {S.sourcesTail}
       </div>
     </>
   );

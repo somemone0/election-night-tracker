@@ -15,10 +15,11 @@ export default defineConfig({
     sourcemap: true,
     target: "es2020",
     chunkSizeWarningLimit: 900,   // MapLibre alone is ~800 kB; it gets its own file so it stays cached across deploys
-    rollupOptions: { output: { manualChunks: { maplibre: ["maplibre-gl"], react: ["react", "react-dom"] } } },
+    // two pages: the tracker (index.html) and the Instagram broadcast loop (broadcast.html)
+    rollupOptions: { input: { main: "index.html", broadcast: "broadcast.html" }, output: { manualChunks: { maplibre: ["maplibre-gl"], react: ["react", "react-dom"] } } },
   },
   server: {
-    proxy: Object.fromEntries(["/data", "/geo", "/img", "/measures.json"].map(p => [p, "http://127.0.0.1:8077"])),
+    proxy: Object.fromEntries(["/data", "/geo", "/img", "/fonts", "/measures.json", "/broadcast.json"].map(p => [p, "http://127.0.0.1:8077"])),
   },
   test: { environment: "node", include: ["test/**/*.test.ts"] },
 });

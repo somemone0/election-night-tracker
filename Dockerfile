@@ -8,7 +8,7 @@ COPY web/ ./
 COPY site/geo /src/site/geo
 COPY site/img /src/site/img
 COPY site/fonts /src/site/fonts
-COPY site/classic.html site/measures.json /src/site/
+COPY site/classic.html site/measures.json site/broadcast.json /src/site/
 RUN npx tsc --noEmit && npx vite build
 
 FROM python:3.12-slim

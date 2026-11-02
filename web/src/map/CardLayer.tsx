@@ -4,9 +4,9 @@
 // so cards never lag behind the map or re-render React while you zoom. Collision layout runs only once the map stops,
 // and cards keep their spot while it moves, so nothing flashes.
 //
-// Transitions between levels: cards that stay keep their element; new ones fade in and old ones fade out. When a
-// city's stacked "cluster" card gives way to its races (zooming in), the races fly out from the cluster's spot; zooming
-// out, they fly back into it while the cluster fades in.
+// Between levels, cards that stay keep their element; new ones appear once the camera lands and old ones go at once
+// (styles.css sets no card animation, so the page reads like print; the in/out phases and the fly-from-cluster offsets
+// are still tracked here if motion is ever wanted back).
 //
 // In a city, council districts' cards are pinned to the center of their district; every other race is in the strip
 // along the bottom of the map (components/RaceStrip), which cards keep clear of (bottomInset).
@@ -16,6 +16,7 @@ import { CONFIG, DISTRICT_COLORS } from "../config";
 import type { CardSpec } from "../lib/cards";
 import { layoutCards, type Offset } from "../lib/layout";
 import { CardBody, cardClass, cardLabel } from "./Card";
+import { S } from "../strings";
 
 // held: arrived while the camera was flying; kept hidden until it lands and the card has a laid-out spot
 interface Entry { spec: CardSpec; phase: "in" | "live" | "out"; fly: [number, number] | null; at: number; held?: boolean }
@@ -136,7 +137,7 @@ export function CardLayer({ map, cards, rightInset, bottomInset, activeWard, onC
   };
 
   return (
-    <div className="cards" aria-label="Races on the map">
+    <div className="cards" aria-label={S.cardsLabel}>
       {entries.map(e => {
         const s = e.spec, o = offsets.get(s.key);
         let fx = 0, fy = 0;
