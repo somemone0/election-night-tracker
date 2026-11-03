@@ -13,7 +13,7 @@ export const ResultsPanel = forwardRef<HTMLElement, DetailProps>(
       <aside className="results" aria-label={S.panelLabel} ref={ref}>
         <div className="rscroll" ref={scroller}>
           <div className="pane" aria-live="polite">
-            <ErrorBoundary label={S.partResults} resetKey={rest.D.generated_at + sel}>
+            <ErrorBoundary label="results" silent resetKey={rest.D.generated_at + sel}>
               <Detail {...rest} sel={sel} />
             </ErrorBoundary>
           </div>

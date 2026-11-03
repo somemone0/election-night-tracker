@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { CONFIG, HOME, HOME_COUNTY } from "./config";
-import { Banners, Legend, TopBar } from "./components/Chrome";
+import { Banners, TopBar } from "./components/Chrome";
 import { ErrorBoundary } from "./components/ErrorBoundary";
-import { RaceStrip } from "./components/RaceStrip";
+import { RaceMenu } from "./components/RaceMenu";
 import { useBallot } from "./hooks/useBallot";
 import { useGeo } from "./hooks/useGeo";
 import { useResults } from "./hooks/useResults";
@@ -52,7 +52,6 @@ function Tracker({ geo, feed }: { geo: Geo; feed: ReturnType<typeof useResults> 
   const [chain, setChain] = useState(() => ({ city: HOME, county: HOME_COUNTY }));
   const panelRef = useRef<HTMLElement>(null);
   const [inset, setInset] = useState(480);
-  const [stripH, setStripH] = useState(0);
 
   // remember the last city so the level buttons know where to go
   useEffect(() => {
@@ -73,7 +72,6 @@ function Tracker({ geo, feed }: { geo: Geo; feed: ReturnType<typeof useResults> 
   const cards = useMemo(() => visibleCards(allCards, view), [allCards, view]);
   const strip = useMemo(() => stripCards(allCards, D), [allCards, D]);
   const elected = useMemo(() => electedWards(D), [D]);
-  const inBerkeley = view.level === "city" && view.id === HOME;
 
   const chosen = picked && picked.view === keyOf(view) ? picked.sel : null;
   const sel = chosen ?? defaultSelection(D, view, strip);
@@ -105,7 +103,7 @@ function Tracker({ geo, feed }: { geo: Geo; feed: ReturnType<typeof useResults> 
     if (v && s.focus) setPicked({ view: keyOf(v), sel: s.focus });
   }, [view, go, selectWard]);
 
-  // a card in Berkeley's strip: show its race without leaving Berkeley (council districts are framed on the map)
+  // Race navigation selects details in the current view; council races frame their district.
   const onStrip = useCallback((s: CardSpec) => {
     if (s.scope === "ward") return selectWard(s.area[1]);
     if (s.focus) setPicked({ view: keyOf(view), sel: s.focus });
@@ -122,12 +120,11 @@ function Tracker({ geo, feed }: { geo: Geo; feed: ReturnType<typeof useResults> 
       <TopBar feed={feed} view={view} names={names} onLevel={onLevel} />
       <div className="app">
         <section className="mapcol" aria-label={S.mapLabel}>
-          <ErrorBoundary label={S.partMap}>
-            <MapView geo={geo} view={view} camera={camera} cards={D ? cards : []} elected={elected} activeWard={activeWard} rightInset={inset} bottomInset={inBerkeley ? stripH : 0}
+          <ErrorBoundary label="map" silent>
+            <MapView geo={geo} view={view} camera={camera} cards={D ? cards : []} elected={elected} activeWard={activeWard} rightInset={inset} bottomInset={0}
               onZoomView={onZoomView} onPick={go} onWard={selectWard} onCard={onCard} />
           </ErrorBoundary>
-          <Legend />
-          <RaceStrip cards={strip} selected={inBerkeley ? sel : null} activeWard={activeWard} rightInset={right} show={inBerkeley && strip.length > 0} onCard={onStrip} onHeight={setStripH} />
+          <RaceMenu cards={strip} selected={sel} rightInset={right} onCard={onStrip} />
         </section>
         <div className="sidecol">
           <Banners feed={feed} />

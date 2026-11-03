@@ -26,7 +26,7 @@ function resolve(D: Results, history: HistoryPoint[], sel: string): Shown | null
     return { kicker: S.california, title: S.proposition(n), ballot: { key: S.prop(n), fallback: D.headline.name }, body: <Prop40Block D={D} history={history} full /> };
   }
   if (sel === "gov") return D.contests?.governor ? { kicker: S.california, title: S.governor, body: <GovernorBlock D={D} /> } : null;
-  if (sel === "rtm") return D.rtm || rtmRace(D) ? { kicker: S.rtmCounties, title: S.measureRtm, ballot: { key: S.measureRtm }, body: <RtmBlock D={D} /> } : null;
+  if (sel === "rtm") return D.rtm || rtmRace(D) ? { kicker: S.rtmCounties, title: S.measureRtm, ballot: { key: "Measure RTM" }, body: <RtmBlock D={D} /> } : null;
   if (sel.startsWith("prop-")) {
     const m = D.state_measures.find(x => "prop-" + x.number === sel);
     return m ? { kicker: S.california, title: S.proposition(m.number), ballot: { key: S.prop(m.number), fallback: m.name }, body: <PropBlock m={m} /> } : null;
@@ -65,7 +65,6 @@ export function Detail({ D, history, sel, ballot }: DetailProps) {
       <div className="foot">
         {S.sourcesLead}{" "}
         {S.sources.map(x => <span key={x.href}><a href={x.href} rel="noopener">{x.text}</a>,{" "}</span>)}
-        {S.sourcesTail}
       </div>
     </>
   );

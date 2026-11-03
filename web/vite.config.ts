@@ -19,6 +19,8 @@ export default defineConfig({
     rollupOptions: { input: { main: "index.html", broadcast: "broadcast.html" }, output: { manualChunks: { maplibre: ["maplibre-gl"], react: ["react", "react-dom"] } } },
   },
   server: {
+    // This checkout lives in Dropbox; polling catches edits when file events are missed.
+    watch: { usePolling: true, interval: 300 },
     proxy: Object.fromEntries(["/data", "/geo", "/img", "/fonts", "/measures.json", "/broadcast.json"].map(p => [p, "http://127.0.0.1:8077"])),
   },
   test: { environment: "node", include: ["test/**/*.test.ts"] },

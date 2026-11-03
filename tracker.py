@@ -350,7 +350,7 @@ class Tracker:
     def __init__(self, sos_base, alameda_base, election_id, out_dir, mock=False, rtm_sources=None, rtm_manual=None, rtm_sources_path=None,
                  calls_path=None):
         self.mock = mock
-        self.calls_path = calls_path   # editors' calls and outstanding-ballot counts; re-read every poll
+        self.calls_path = calls_path   # AP calls transcribed by editors; re-read every poll
         self.caller = calls.Caller()
         self.rtm_sources = rtm_sources or {}
         self.rtm_sources_path = rtm_sources_path   # re-read every poll, so new addresses apply without a restart
@@ -399,10 +399,9 @@ class Tracker:
         for name in jobs:
             if name not in fresh and self.last[name]:
                 snap["meta"][name]["stale"] = True
-        try:   # race calls: editors' desk calls, plus races the count has made certain
+        try:   # AP calls only, transcribed by editors; never infer a winner from the count
             cfg = load_calls(self.calls_path)
-            mock_out = fetch_json(f"{self.sos_base}/__mock/outstanding") if self.mock else None
-            self.caller.apply(snap, cfg, mock_out)
+            self.caller.apply(snap, cfg)
         except Exception as e:
             errors.append({"source": "calls", "error": str(e), "at": datetime.now(timezone.utc).isoformat(timespec="seconds")})
         write_outputs(self.out_dir, snap)
@@ -451,7 +450,7 @@ def load_calls(path):
     try:
         return json.loads(Path(path).read_text())
     except ValueError as e:
-        raise ValueError(f"{path} is not valid JSON ({e}); no desk calls applied") from None
+        raise ValueError(f"{path} is not valid JSON ({e}); no AP calls applied") from None
 
 
 def load_rtm_sources(path):
@@ -478,7 +477,7 @@ def main(argv=None):
     ap.add_argument("--host", default="127.0.0.1", help="address to serve on (0.0.0.0 in a container)")
     ap.add_argument("--rtm-sources", default=str(HERE / "rtm_sources.json"), help="where to read Measure RTM in the other four counties")
     ap.add_argument("--rtm-manual", default=str(HERE / "rtm_manual.json"), help="hand-entered RTM numbers, used when a county cannot be read")
-    ap.add_argument("--calls", default=str(HERE / "calls.json"), help="editors' race calls and outstanding-ballot counts (see calls.py)")
+    ap.add_argument("--calls", default=str(HERE / "calls.json"), help="AP calls transcribed by editors (see calls.example.json)")
     ap.add_argument("--mock", action="store_true", help="start the mock election-night server and poll it")
     ap.add_argument("--mock-port", type=int, default=8765)
     ap.add_argument("--start", type=float, default=-30.0, help="mock clock: sim minutes after 8 p.m.")

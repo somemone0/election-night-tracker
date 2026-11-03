@@ -15,20 +15,22 @@ moves between them (clicking an area or using the buttons above the map works to
 
 | Level | MapLibre zoom (on a ~1000 px map) | Cards on the map | Opens on |
 |---|---|---|---|
-| City (Berkeley) | above 11.5 | council districts; every race on a Berkeley ballot in the strip along the bottom | the first race in the strip |
+| City (Berkeley) | above 11.5 | council districts; every race on a Berkeley ballot in the right-side race popout | the first Berkeley race |
 | Bay Area (RTM's five counties, with CA-12 inside) | 7.5-11.5 | Measure RTM, county measures, CA-12, Berkeley's cluster | Measure RTM |
 | State (California) | 7.5 and wider | Prop 40, governor, RTM | Prop 40 (with chart) |
 
-Clicking a card (on the map or in the strip) shows that race in the panel: the result, every candidate, the call,
-and for measures the question as printed on the ballot. In Berkeley the strip runs council districts, other city
-offices, city measures, RTM, CA-12, county measures, then Prop 40, governor and the other propositions; a vertical
-scroll over it moves it sideways. Congress used to be a level of its own; it is now part of the Bay Area level, and old
+Clicking a map card or a race in the popout shows that race in the panel: the result, every candidate, the call,
+and a sourced description for measures. A collapsible race popout sits at the right edge of the map with compact,
+name-only rows grouped into Berkeley district races (including other local candidate contests), local measures,
+statewide races and RTM. Selecting a row opens its results; council selections also frame the district.
+Congress used to be a level of its own; it is now part of the Bay Area level, and old
 `#congress=12` links open there.
 
 Ballot question text is in `site/measures.json`, keyed `"Measure V"` (no "Bond", no " - City of ...") or `"Prop 40"`.
-The results feeds don't carry it. The Berkeley measures and RTM were copied from Local News Matters' Nov. 3 county
-listing; check them against the county's official sample ballot. Propositions without an entry show the Secretary
-of State's short ballot label. No rebuild is needed after editing the file.
+The results feeds don't carry it. The Berkeley measures and RTM use editorial summaries of The Daily Californian’s Oct. 29, 2026 article,
+[“Berkeley voters to decide on 8 measures”](https://www.dailycal.org/news/city/berkeley-voters-to-decide-on-8-measures/article_2e2e8fc9-be1d-4e97-91e9-5cf4876ebb52.html),
+shown under “About the measure” with a source link. They are not official ballot questions.
+Propositions without an entry show the Secretary of State's short ballot label. No rebuild is needed after editing the file.
 
 The level changes once the zoom has moved 0.75 or more since the last change, or when the centre leaves the area,
 so small zooms and pans never flip it back and forth. Over water, the nearest area counts.
@@ -57,19 +59,19 @@ How levels transition: the map's camera moves and finer boundaries fade in with 
 once, like turning a page. Cards and the race column have no animation (cards that stay keep their place).
 
 Code map: `src/lib/` (pure logic: geometry, zoom bands, which cards show, card layout), `src/map/` (MapLibre layers,
-card layer), `src/panels/` (the race detail), `src/components/` (results blocks, the strip), `src/hooks/` (data loading), `src/config.ts` (settings).
+card layer), `src/panels/` (the race detail), `src/components/` (results blocks, the race popout), `src/hooks/` (data loading), `src/config.ts` (settings).
 
 Wording: every label, note and message the tracker and the broadcast show is in `web/src/strings.js` (names, race
 titles and ballot text come from the data). Edit it and rebuild. Entries that are functions fill in numbers or names.
 
 Race cards sit on the map: a square black card per race with the candidates' headshots (leader ringed) and the
-leader's margin in points as plain text; the card line gives the vote lead, and a red border marks races within 3
+leader's margin in points as plain text; the card line gives the vote lead, and an amber border marks races within 3
 points. Cards anchor to the area a race covers (California, a county, CA-12, the
 city, or one of Berkeley's eight council districts). The Bay Area shape carries the Measure RTM five-county total. Zoomed out, each city's races fold into one stacked
 "cluster" card (Berkeley's, at the Bay Area level). Cards
 slide sideways, stack, or drop below their point so they never overlap; clicking one jumps to the race (or zooms into
 the city). In Berkeley, each council district's card is a compact tab (leader and margin) pinned to the center of its
-district, and every race is in the strip along the bottom. Called races get a green check (see "Race calls"). Headshots come from `site/img/headshots/<first-last>.png`; anyone without one gets initials.
+district, and every race is in the right-side race popout. Called races get a green check (see "Race calls"). Headshots come from `site/img/headshots/<first-last>.png`; anyone without one gets initials.
 
 Before the county posts the Nov. 3 page, the tracker fills the race list from the county's zero report
 (`fixtures/alameda_zero_report.html`, all votes 0) so every race and candidate is on the map; the page says so in a
@@ -90,18 +92,15 @@ and a "board" layer hides every street outside Berkeley's city limits; if the st
 board with the boundaries. The page rechecks the boundary files on each load, so a deploy with new shapes shows up right away. MapLibre GL 4.7.1 and React 18.3.1 are
 bundled into `site/app/`; only the Newsreader fallback font loads from Google Fonts.
 
-Look and feel: white on black, like a chalkboard. California, the counties and CA-12 are thin white outlines; Berkeley
-is the only place with streets, drawn white over its eight council districts in the colors and grain of the Daily Cal's
-"Berkeley District Cutouts" graphics (`DISTRICT_COLORS` in `web/src/config.ts`). Only districts with a race this year
+Look and feel: the AC Transit story’s near-black background, warm gray text and rules, blue accents and amber highlights. California, the counties and CA-12 are thin white outlines; Berkeley
+is the only place with streets, drawn white over its eight council districts in the colors and grain of the AC Transit story’s blue, amber and warm gray palette (`DISTRICT_COLORS` in `web/src/config.ts`). Only districts with a race this year
 are colored (the rest are left clear, just a faint outline), and council races carry their district's color on their
 cards and in the race column. The page is set like a results page in print: hairline rules instead of boxes, square
 corners, no shadows, and an AP-style table per race (check, candidate, votes, pct.) with the leader or winners in bold.
-Calls are a sentence ("✓ Simon wins. Called by The Daily Californian at 11:42 p.m. Nov. 4."), and times are AP style.
-No party colors; close races get red.
+Calls are a sentence ("✓ Simon wins. This race has been called by The Associated Press."). AP call times remain in the data but are not displayed; update times use AP style.
+No party colors; close races get amber.
 
-Type follows the rent-o-meter: Tiempos Headline Bold for headings and Plantin for text, in sentence case. The
-Daily Cal's files are in `site/fonts/` (`tiempos-headline-bold.woff2`, `plantin-regular.woff2`, copied from the
-rent-o-meter); there is no italic cut, so the page uses none.
+Type matches the data.dailycal.org homepage: Georgia for headings and body text, with bold headings and regular body copy. Georgia uses the system font, so no font download is needed.
 Text on the page is kept to what the results need: no explainers or flavor text.
 
 ## Measure RTM across all five counties
@@ -128,26 +127,29 @@ The mock server serves all four outside sources (`python3 tracker.py --mock ...`
 
 ## Race calls
 
-`calls.py` marks races as called, two ways:
+`calls.py` displays only calls made by The Associated Press, transcribed by editors into `calls.json`.
+The tracker rereads the file every poll. It does not make desk calls or calculate automatic decisions,
+including in mock mode. A race without an AP call stays uncalled regardless of its lead or reporting percentage.
 
-* **Desk calls**: an editor types the call into `calls.json` (copy `calls.example.json`). This is how races get called
-  on election night, and the only way to call a ranked-choice race whose leader is short of a majority. The tracker
-  re-reads the file every poll; a call naming someone not in the race, or contradicting what the count has already
-  made certain, is ignored, and a call for someone not currently leading is kept but flagged in the tracker's console
-  ("CALL CHECK").
-* **Decided by the count**: automatic, only when certain: the trailing side can't catch up even if every ballot still
-  to be counted went its way. That needs the number of outstanding ballots, which the registrars publish in their
-  unprocessed-ballot reports: type it into `calls.json` under `"outstanding"` (Alameda, California, and the other four
-  RTM counties for Measure RTM). With no number for a place, nothing there is decided automatically. District races are
-  held to the whole county's outstanding count, which is safe but slow, so most races are decided days after
-  election night.
+Start with an empty file:
 
-Only races entirely inside Alameda County are called from the county page (not statewide offices, appeals-court
-retention votes or RTM, which appear there with only Alameda's share; CA-12 is the one House district wholly in the
-county). Statewide races are called from the state feed, and RTM from the five-county total once all five are in.
-The page shows "✓ Simon wins · Called" (desk) or "· Decided" (count) on the race, a check on the winner's headshot,
-and a green chip on the map card. In mock mode the mock server reports its own outstanding ballots, so races get
-decided as the simulated count goes on (`curl 'localhost:8765/__mock/clock?set=17280'` jumps 12 days ahead).
+```json
+{"source": "AP"}
+```
+
+After verifying a call against AP, add it under `state` (keys such as `"Governor"` or `"Prop 40"`),
+`alameda` (the exact local race title), or `rtm` (one call object for the five-county measure).
+Each call object contains `"winners": ["Exact candidate name"]` (or `["Yes"]` / `["No"]` for a measure)
+and `"at": "2026-11-04T07:42:00Z"` with **AP's actual call time and timezone**. Multiple-seat races can
+have multiple names, including a partial list if AP has called only some seats.
+`calls.example.json` illustrates the format; its entries are examples, not verified AP calls.
+
+The page attributes calls to The Associated Press and marks winners with checks. A call may name a
+candidate who trails the first-choice count (for example, after ranked-choice transfers). Unknown names,
+duplicate winners, too many winners, missing timestamps and legacy desk-call files are ignored with
+console warnings. Remove or correct an entry when AP withdraws or revises a call; the next poll reflects it.
+Only whole-race results receive calls: statewide contests use statewide totals, RTM uses its combined total,
+and local calls apply to races wholly within Alameda County (including CA-12).
 
 ## Run it
 
@@ -184,11 +186,10 @@ the line chart), `races.csv` (every Berkeley/county race, flat).
 * **The mock is synthetic.** It follows the documented feed shapes (SoS v20 guide, observed JSON/CSV
   responses, Alameda page markup) with a made-up turnout curve: a big mail-ballot drop at 8 p.m., batches
   every 15 minutes overnight, every 6 hours afterward, counts that never decrease, and late ballots that
-  lean toward Yes on Prop 40. The page shows a yellow "test mode" banner when it is reading the mock.
+  lean toward Yes on Prop 40. Simulations do not display a test-mode banner.
 * **Not modeled:** the SoS `/returns/query` endpoint (needs the contest-ID appendix), candidate contests
   on the SoS feed, ranked-choice tabulation pages, and corrections that lower a count.
-* "Leading" on the page is not a race call. Calls come from `calls.json` (the desk) or from the count once it is
-  certain; see "Race calls".
+* "Leading" on the page is not a race call. Calls come only from AP, transcribed into `calls.json`; see "Race calls".
 * Set `CONFIG.masthead` in `web/src/config.ts` to change the title in the top bar, then `npm run build`.
 * City-level Prop 40 votes are not published by either source, so city and district views show the county and
   statewide totals for it.
@@ -210,8 +211,8 @@ tools/prepare_headshots.py  resizes the headshot folder into site/img/headshots 
 rtm.py            Measure RTM: reads the four other counties and adds up the five-county total
 rtm_sources.json  where each county's RTM results come from (set Clarity addresses on election night)
 rtm_manual.example.json  template for hand-entered numbers (San Francisco)
-calls.py          race calls: desk calls from calls.json, and races the count has made certain
-calls.example.json  template for desk calls and outstanding-ballot counts
+calls.py          AP calls transcribed by editors into calls.json
+calls.example.json  template for AP calls transcribed by editors
 fixtures/         county page structure and SoS measure list the mock is built from
 tests/            parser, mock-consistency, failure-handling and race-call tests
 ```
@@ -219,11 +220,11 @@ tests/            parser, mock-consistency, failure-handling and race-call tests
 ## Instagram Live (broadcast.html)
 
 `broadcast.html` is a 1080x1920 results loop for Instagram Live, paced like the Daily Cal's "dc26 full cycle" video
-and set like the website (chalkboard black, Tiempos and Plantin, hairline rules, council districts in their cutout
-colors): City Council (with the rent board), Berkeley measures, the school board, Measure RTM (Bay Area) and the state
+and set like the website (near-black backgrounds, Georgia type, hairline rules, and blue, amber and warm gray
+district colors): City Council (with the rent board), Berkeley measures, the school board, Measure RTM (Bay Area) and the state
 (governor, CA-12, propositions), about 8 seconds each. Rows come in one after another with their numbers counting up,
 and the section tabs under the DC'26 logo show the loop. It reads the same `data/results.json` as the site, so it updates
-itself. As in the site's tables, ✓ marks a called winner, leaders are bold and the rest muted; the red tick on a
+itself. As in the site's tables, ✓ marks a called winner, leaders are bold and the rest muted; the amber tick on a
 measure's bar is what it needs to pass. Candidates get a (D)/(R) only when every candidate shown has a party.
 
 The video's National slide (House and Senate balance) is left out: none of our sources has national results.
@@ -254,7 +255,7 @@ gcloud run deploy election-tracker --source . --project ac-transit-visualizer --
 # election night: RTM settings live in a bucket mounted at /config and are re-read every poll (no redeploy)
 gcloud storage cp rtm_sources.json gs://ac-transit-visualizer-election-config/   # Clarity addresses
 gcloud storage cp rtm_manual.json  gs://ac-transit-visualizer-election-config/   # SF numbers typed in
-gcloud storage cp calls.json       gs://ac-transit-visualizer-election-config/   # desk calls, outstanding ballots
+gcloud storage cp calls.json       gs://ac-transit-visualizer-election-config/   # AP calls transcribed by editors
 
 # demo: run the simulated election night instead of the real sources (the page says "Test data, not real results")
 gcloud run services update election-tracker --update-env-vars MOCK=1,MOCK_SPEED=2 --project ac-transit-visualizer --region us-west1

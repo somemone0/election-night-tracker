@@ -18,7 +18,7 @@ COPY tracker.py alameda_parse.py rtm.py calls.py mock_server.py rtm_sources.json
 COPY fixtures/ fixtures/
 COPY --from=web /src/site/ site/
 RUN mkdir -p site/data
-# Cloud Run sets PORT. RTM_CONFIG is where rtm_sources.json, rtm_manual.json and calls.json live (a mounted bucket on
+# Cloud Run sets PORT. RTM_CONFIG is where rtm_sources.json, rtm_manual.json and AP-verified calls.json live (a mounted bucket on
 # Cloud Run); all are re-read every poll, so updating them needs no redeploy.
 # MOCK=1 runs a simulated election night instead of the real sources (for demos; the page says it is test data),
 # starting MOCK_START minutes after polls close and advancing MOCK_SPEED simulated minutes per second.

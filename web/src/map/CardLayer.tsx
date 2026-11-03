@@ -1,6 +1,6 @@
 // Race cards over the map.
 //
-// Stability: card positions are written straight to the DOM on every map "move" event (the same frame MapLibre draws),
+// Stability: card positions are written straight to the DOM on every map "render" event, after MapLibre updates its camera,
 // so cards never lag behind the map or re-render React while you zoom. Collision layout runs only once the map stops,
 // and cards keep their spot while it moves, so nothing flashes.
 //
@@ -8,8 +8,7 @@
 // (styles.css sets no card animation, so the page reads like print; the in/out phases and the fly-from-cluster offsets
 // are still tracked here if motion is ever wanted back).
 //
-// In a city, council districts' cards are pinned to the center of their district; every other race is in the strip
-// along the bottom of the map (components/RaceStrip), which cards keep clear of (bottomInset).
+// In a city, council cards are pinned to their districts; all ballot races are available in the RaceMenu popout.
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Map as MlMap } from "maplibre-gl";
 import { CONFIG, DISTRICT_COLORS } from "../config";
@@ -25,7 +24,7 @@ export interface CardLayerProps {
   map: MlMap;
   cards: CardSpec[];
   rightInset: number;             // px of the map covered by the results panel
-  bottomInset: number;            // px covered by Berkeley's race strip
+  bottomInset: number;            // px reserved along the map’s bottom edge
   activeWard: string | null;
   onCard: (s: CardSpec) => void;
 }
@@ -109,12 +108,13 @@ export function CardLayer({ map, cards, rightInset, bottomInset, activeWard, onC
     const onStart = () => { moving.current = true; };
     const onEnd = () => {
       moving.current = false;
+      reposition();
       relayout();
       const now = performance.now();   // cards that arrived mid-flight: now that they have a spot, bring them in
       setEntries(prev => (prev.some(e => e.held) ? prev.map(e => (e.held ? { ...e, held: false, at: now } : e)) : prev));
     };
-    map.on("move", onMove); map.on("movestart", onStart); map.on("moveend", onEnd); map.on("resize", onEnd);
-    return () => { map.off("move", onMove); map.off("movestart", onStart); map.off("moveend", onEnd); map.off("resize", onEnd); };
+    map.on("render", onMove); map.on("movestart", onStart); map.on("moveend", onEnd); map.on("resize", onEnd);
+    return () => { map.off("render", onMove); map.off("movestart", onStart); map.off("moveend", onEnd); map.off("resize", onEnd); };
   }, [map, reposition, relayout]);
 
   useLayoutEffect(() => {

@@ -40,4 +40,20 @@ describe("broadcast slides", () => {
     expect(displayName("Majdi 'Gaith' Abuhamdieh")).toBe("Majdi Abuhamdieh");
     expect(displayName("Igor A. Tregub")).toBe("Igor Tregub");
   });
+  it("uses the AP measure outcome even when the displayed count disagrees", () => {
+    const data = structuredClone(D);
+    const prop = data.state_measures.find(m => m.number === "40")!;
+    prop.state.yes_pct = 20;
+    prop.state.no_pct = 80;
+    prop.state.call = { winners: ["Yes"], how: "ap", at: "2026-11-04T07:42:00Z" };
+    data.headline.state = prop.state;
+    const block = buildSlides(data, {}, { slideSeconds: 8, stateProps: ["40"], parties: {} })
+      .find(s => s.key === "state")!.blocks.find(b => b.key === "prop-40");
+    expect(block).toMatchObject({ called: true, passed: true, yes: 20 });
+  });
+  it("keeps RTM ballot copy when its display title is edited", () => {
+    const slides = buildSlides(D, { "Measure RTM": { question: "", short: "Transit funding" } });
+    const rtm = slides.find(s => s.key === "bay")!.blocks.find(b => b.key === "rtm");
+    expect(rtm).toMatchObject({ title: "Regional Transit Measure", label: "Transit funding" });
+  });
 });

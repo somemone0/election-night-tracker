@@ -1,20 +1,20 @@
 {
-  "_help": "Copy to calls.json. Every part is optional; see calls.py for the rules. Race names under 'alameda' are the titles exactly as the county results page prints them.",
-  "outstanding": {
-    "Alameda": 120000,
-    "California": 3900000,
-    "Contra Costa": 61000,
-    "San Francisco": 40000,
-    "San Mateo": 22000,
-    "Santa Clara": 95000
-  },
+  "_help": "Template only: these entries illustrate the format and are NOT verified AP calls. Start calls.json with {\"source\":\"AP\"}; add entries only after checking AP. Use AP\u2019s call time (ISO 8601 with timezone). Remove an entry if AP withdraws its call. Local race titles must exactly match the county feed. Races without an AP call remain uncalled; vote totals never trigger a call.",
+  "source": "AP",
   "state": {
-    "Prop 40": "No",
-    "Governor": "Xavier Becerra"
+    "Prop 40": {
+      "winners": [
+        "No"
+      ],
+      "at": "2026-11-04T07:42:00Z"
+    }
   },
   "alameda": {
-    "U.S. Representative, 12th Congressional District": "Lateefah Simon",
-    "School Directors - Berkeley": ["First Winner", "Second Winner", "Third Winner"]
-  },
-  "rtm": "Yes"
+    "U.S. Representative, 12th Congressional District": {
+      "winners": [
+        "Lateefah Simon"
+      ],
+      "at": "2026-11-04T07:42:00Z"
+    }
+  }
 }

@@ -1,13 +1,13 @@
-/* The Instagram broadcast, set like the website (styles.css) at phone-video size: white on chalkboard black, Tiempos
-   Headline for names and numbers, Plantin for everything else, hairline rules instead of boxes, square corners, council
-   districts marked with their cutout colors. Leaders are bold white and the rest muted, as in the website's tables.
+/* The Instagram broadcast, set like the website (styles.css) at phone-video size: the AC Transit story palette, Georgia
+   for names, numbers and body copy, hairline rules instead of boxes, square corners, council
+   districts marked with blue, amber and warm gray shades. Leaders are bold white and the rest muted, as in the website's tables.
    Sizes are in px of the 1080x1920 stage. */
 :root {
-  --board: #111312; --board-2: #181B1A; --board-3: #1F2321; --text: #FFFFFF; --muted: #A4A9A6; --soft-ink: #6E7471;
-  --hair: rgba(255, 255, 255, .22); --line: rgba(255, 255, 255, .12); --mid: rgba(255, 255, 255, .10);
-  --live: #8DB86A; --close: #E5767B;
-  --head: "Tiempos Headline", "Newsreader", Georgia, "Times New Roman", serif;
-  --serif: "Plantin", "Newsreader", Georgia, "Times New Roman", serif;
+  --board: #0D0D0D; --board-2: #1A1A19; --board-3: #252523; --text: #FFFFFF; --muted: #C3C2B7; --soft-ink: #8E8D84;
+  --hair: #383835; --line: rgba(195, 194, 183, .14); --mid: rgba(195, 194, 183, .10);
+  --accent: #3987E5; --live: #3987E5; --close: #C98500;
+  --head: Georgia, "Times New Roman", serif;
+  --serif: Georgia, "Times New Roman", serif;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; background: var(--board); overflow: hidden; }

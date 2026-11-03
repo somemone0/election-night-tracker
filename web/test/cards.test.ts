@@ -3,6 +3,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
 import { cardSpecs, stripCards, visibleCards } from "../src/lib/cards";
+import { S } from "../src/strings";
+import { raceGroups } from "../src/lib/raceGroups";
 import { ballotKey } from "../src/hooks/useBallot";
 import { headshotOf, setHeadshots } from "../src/lib/headshots";
 import type { Results, View } from "../src/types";
@@ -52,15 +54,24 @@ describe("cards per level", () => {
   });
 });
 
-describe("Berkeley's strip", () => {
+describe("Berkeley's race navigation", () => {
+  it("groups every ballot race once, with RTM separate from local measures", () => {
+    const cards = stripCards(cardSpecs(D, geo), D);
+    const groups = raceGroups(cards);
+    expect(groups.map(g => g.key)).toEqual(["berkeley", "measures", "state", "rtm"]);
+    expect(groups.flatMap(g => g.cards).map(c => c.key).sort()).toEqual(cards.map(c => c.key).sort());
+    expect(groups.find(g => g.key === "rtm")!.cards.map(c => c.key)).toEqual(["rtm-berkeley"]);
+    expect(groups.find(g => g.key === "measures")!.cards.every(c => c.measure && !c.key.startsWith("rtm-"))).toBe(true);
+    expect(groups.find(g => g.key === "state")!.cards.every(c => c.scope === "state")).toBe(true);
+  });
   it("has every race on a Berkeley ballot, in order, each selectable", () => {
     const st = stripCards(cardSpecs(D, geo), D);
     const t = tags(st);
     expect(t.slice(0, 4)).toEqual(["Council · D1", "Council · D4", "Council · D7", "Council · D8"]);
     const berk = D.races.filter(r => r.city === "Berkeley").length;
     expect(st.filter(s => s.cityName === "Berkeley" && s.key !== "rtm-berkeley")).toHaveLength(berk);
-    expect(t.indexOf("Measure RTM")).toBeGreaterThan(t.indexOf("Measure V"));
-    expect(t.indexOf("U.S. House · CA-12")).toBeGreaterThan(t.indexOf("Measure RTM"));
+    expect(t.indexOf(S.measureRtm)).toBeGreaterThan(t.indexOf("Measure V"));
+    expect(t.indexOf("U.S. House · CA-12")).toBeGreaterThan(t.indexOf(S.measureRtm));
     expect(t).toContain("Prop 40 · Statewide");
     expect(t).toContain("Prop 41 · Statewide");
     expect(t.filter(x => x === "Prop 40 · Statewide")).toHaveLength(1);

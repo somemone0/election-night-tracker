@@ -29,7 +29,7 @@ export const RANK: Record<Level, number> = { city: 0, congress: 1, county: 2, st
 export const LEVEL_LABEL: Record<Level, string> = S.levels;
 export const HOME = CONFIG.start.id;   // the city this page is about; its cluster also shows at county level
 
-// Council district colors from the Daily Cal's "Berkeley District Cutouts" (fill, darker edge).
+// Original district colors from the Daily Cal's Berkeley District Cutouts graphics.
 export const DISTRICT_COLORS: Record<string, { fill: string; edge: string }> = {
   "1": { fill: "#AB4B50", edge: "#7D373A" }, "2": { fill: "#3C8284", edge: "#2C5F60" },
   "3": { fill: "#8F5166", edge: "#683B4A" }, "4": { fill: "#B89A41", edge: "#86702F" },
@@ -37,7 +37,7 @@ export const DISTRICT_COLORS: Record<string, { fill: string; edge: string }> = {
   "7": { fill: "#487A9B", edge: "#355971" }, "8": { fill: "#B5673C", edge: "#844B2C" },
 };
 export const INK = "#242A30", PAPER = "#F5F3EE";
-export const CHALK = "#FFFFFF", BOARD = "#111312";   // white on black, like a chalkboard
+export const CHALK = "#FFFFFF", BOARD = "#0D0D0D";   // white on black, like a chalkboard
 
 // The county level is one shape: Measure RTM's five counties merged ("Bay Area", built by tools/build_geo.py).
 export const HOME_COUNTY = "rtm";

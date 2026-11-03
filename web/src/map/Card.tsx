@@ -8,7 +8,7 @@ import { S } from "../strings";
 
 // the state of the race in a word or two, as text: "✓ Called", "+1.5", "Tied"
 function LeadChip({ s }: { s: CardSpec }) {
-  if (s.call) return <span className="lt won" title={s.call.how === "desk" ? S.called : S.decidedTip}>✓ {s.measure ? (s.call.winners[0] === "Yes" ? S.passes : S.fails) : S.called}</span>;
+  if (s.call) return <span className="lt won" title={S.called}>✓ {s.measure ? (s.call.winners[0] === "Yes" ? S.passes : S.fails) : S.called}</span>;
   if (!s.who) return null;
   if (s.sub === S.unopposed) return <span className="lt">{S.unopposed}</span>;
   if (s.who === S.tied) return <span className="lt">{S.tied}</span>;
@@ -27,7 +27,7 @@ export const cardClass = (s: CardSpec, activeWard: string | null) => {
   if (s.more) return "card more";
   if (s.scope === "cluster") return "card cluster";
   const zero = !s.who && s.sub !== S.unopposed;
-  return "card" + (s.scope === "ward" ? " district" : "") + (s.call ? " called" : isClose(s) ? " close" : "") + (zero ? " zero" : "") + (s.scope === "ward" && s.area[1] === activeWard ? " active" : "");
+  return "card" + (s.scope === "ward" ? " district" : "") + (s.call ? " called" : "") + (zero ? " zero" : "") + (s.scope === "ward" && s.area[1] === activeWard ? " active" : "");
 };
 
 export const CardBody = memo(function CardBody({ s, moreCount }: { s: CardSpec; moreCount?: number }) {

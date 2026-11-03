@@ -1,7 +1,7 @@
 // Polls results.json and history.json. Built to keep showing the last good numbers no matter what the network does:
 // one request at a time, a timeout on each, a basic shape check before anything replaces the current data, a retry
 // with backoff after failures, and an immediate refresh when the tab comes back into view.
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { CONFIG } from "../config";
 import type { HistoryPoint, Results } from "../types";
 import { S } from "../strings";
@@ -27,22 +27,22 @@ export function looksLikeResults(x: unknown): x is Results {
 
 export function useResults(): Feed {
   const [feed, setFeed] = useState<Feed>({ data: null, history: [], error: null, lastOk: null });
-  const busy = useRef(false);
 
   useEffect(() => {
-    let alive = true, timer = 0, failures = 0;
+    // Each effect owns its requests: StrictMode can restart it while an old fetch is pending.
+    let alive = true, busy = false, timer = 0, failures = 0;
 
     const schedule = (ms: number) => { window.clearTimeout(timer); timer = window.setTimeout(tick, ms); };
     async function tick() {
-      if (busy.current || !alive) return;
-      busy.current = true;
+      if (busy || !alive) return;
+      busy = true;
       const ctl = new AbortController(), to = window.setTimeout(() => ctl.abort(), CONFIG.fetchTimeoutMs);
       try {
         const [res, hist] = await Promise.all([
           getJson<unknown>(CONFIG.results, ctl.signal),
           getJson<HistoryPoint[]>(CONFIG.history, ctl.signal).catch(() => null),
         ]);
-        if (!looksLikeResults(res)) throw new Error(S.resultsBadFormat);
+        if (!looksLikeResults(res)) throw new Error();
         failures = 0;
         if (alive) setFeed(prev => ({
           // keep the same object when nothing changed, so nothing downstream re-renders
@@ -53,11 +53,11 @@ export function useResults(): Feed {
       } catch (e) {
         failures++;
         const msg = location.protocol === "file:" ? S.needServer
-          : (e as Error).name === "AbortError" ? S.resultsTimedOut : (e as Error).message;
+          : (e as Error).name === "AbortError" ? "" : (e as Error).message;
         if (alive) setFeed(prev => ({ ...prev, error: msg }));
       } finally {
         window.clearTimeout(to);
-        busy.current = false;
+        busy = false;
         if (alive) schedule(failures ? Math.min(CONFIG.refreshMs, 2000 * 2 ** (failures - 1)) : CONFIG.refreshMs);
       }
     }

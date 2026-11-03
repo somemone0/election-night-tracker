@@ -25,7 +25,7 @@ interface Props {
   elected: Set<string>;
   activeWard: string | null;
   rightInset: number;
-  bottomInset: number;            // px of the map covered by Berkeley's race strip (cards stay above it)
+  bottomInset: number;            // px reserved along the map’s bottom edge
   onZoomView: (v: View) => void;
   onPick: (level: Level, id: string) => void;
   onWard: (id: string) => void;
@@ -37,7 +37,6 @@ const WARD_LABEL_ZOOM = 10.5;
 export function MapView(props: Props) {
   const box = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<MlMap | null>(null);
-  const [failed, setFailed] = useState<string | null>(null);
   const live = useRef(props); live.current = props;         // handlers read the latest props without re-binding
   const active = useRef<ActiveArea | null>(null);
   const programmatic = useRef(false);
@@ -51,7 +50,11 @@ export function MapView(props: Props) {
   };
   const zeff = (m: MlMap) => { const v = visible(m); return effectiveZoom(m.getZoom(), v.w, v.h); };
   const visCenter = (m: MlMap) => { const v = visible(m); return m.unproject([v.w / 2, v.h / 2]); };
-  const padding = (m: MlMap) => ({ top: 40, bottom: 40 + live.current.bottomInset, left: 72, right: visible(m).inset + 24 });
+  const padding = (m: MlMap) => {
+    // Leave room for the race popout when framing Berkeley, including District 8 on the east side.
+    const menuSpace = window.innerWidth > 860 && live.current.view.level === "city" ? 224 : 0;
+    return { top: 40, bottom: 40 + live.current.bottomInset, left: 72, right: visible(m).inset + 24 + menuSpace };
+  };
 
   // create the map once
   useEffect(() => {
@@ -66,7 +69,7 @@ export function MapView(props: Props) {
           dragRotate: false, pitchWithRotate: false, touchPitch: false, attributionControl: false, fadeDuration: 0,
         });
       } catch (err) {
-        setFailed((err as Error).message || S.noWebgl);
+        console.error("Map initialization failed", err);
         return;
       }
       m.touchZoomRotate.disableRotation();
@@ -118,10 +121,11 @@ export function MapView(props: Props) {
   // zoom/pan -> level changes, hover names, clicks on areas
   useEffect(() => {
     if (!map) return;
-    let timer = 0, hovered: { source: string; id: string } | null = null, zooming = false;
+    let timer = 0, hovered: { source: string; id: string } | null = null, zooming = false, moving = false;
     const container = map.getContainer();
 
     const onMoveEnd = () => {
+      moving = false;
       if (programmatic.current) return;
       window.clearTimeout(timer);
       timer = window.setTimeout(() => {
@@ -154,8 +158,9 @@ export function MapView(props: Props) {
       hovered = h;
     };
     const hideTip = () => { if (tip.current) tip.current.style.opacity = "0"; container.style.cursor = ""; setHover(null); };
+    const onMoveStart = () => { moving = true; hideTip(); };
     const onMouseMove = (e: maplibregl.MapMouseEvent) => {
-      if (zooming || (e.originalEvent.target as Element)?.closest?.(".card")) return hideTip();
+      if (moving || zooming || map.isMoving() || (e.originalEvent.target as Element)?.closest?.(".card")) return hideTip();
       const p = pick(e.point);
       if (!p) return hideTip();
       setHover({ source: p.level, id: p.id });
@@ -177,12 +182,12 @@ export function MapView(props: Props) {
     const onZoomEnd = () => { zooming = false; container.classList.remove("zooming"); };
     const onZoom = () => container.classList.toggle("wards-on", map.getZoom() >= WARD_LABEL_ZOOM);
 
-    map.on("moveend", onMoveEnd); map.on("mousemove", onMouseMove); map.on("mouseout", hideTip); map.on("click", onClick);
+    map.on("movestart", onMoveStart); map.on("moveend", onMoveEnd); map.on("mousemove", onMouseMove); map.on("mouseout", hideTip); map.on("click", onClick);
     map.on("zoomstart", onZoomStart); map.on("zoomend", onZoomEnd); map.on("zoom", onZoom);
     onZoom();
     return () => {
       window.clearTimeout(timer);
-      map.off("moveend", onMoveEnd); map.off("mousemove", onMouseMove); map.off("mouseout", hideTip); map.off("click", onClick);
+      map.off("movestart", onMoveStart); map.off("moveend", onMoveEnd); map.off("mousemove", onMouseMove); map.off("mouseout", hideTip); map.off("click", onClick);
       map.off("zoomstart", onZoomStart); map.off("zoomend", onZoomEnd); map.off("zoom", onZoom);
     };
   }, [map]);
@@ -199,7 +204,6 @@ export function MapView(props: Props) {
   return (
     <>
       <div ref={box} className="map" />
-      {failed && <div className="nomap">{S.mapFailed(failed)}</div>}
       {map && overlay && createPortal(
         <>
           <WardLabels map={map} geo={props.geo} elected={berkeleyInView ? props.elected : new Set()} activeWard={props.activeWard} />
@@ -223,8 +227,8 @@ function WardLabels({ map, geo, elected, activeWard }: { map: MlMap; geo: Geo; e
       }
     };
     place();
-    map.on("move", place);
-    return () => { map.off("move", place); };
+    map.on("render", place);
+    return () => { map.off("render", place); };
   }, [map, geo]);
   return (
     <div className="wardlabels" aria-hidden="true">

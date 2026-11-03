@@ -53,15 +53,14 @@ function Num({ value, delay = 0, d = 1, suffix = "%", sign = false }: { value: n
 }
 
 const Check = () => <span className="ck" aria-label={S.called}>✓</span>;
-const inText = (p: number | null) => (p == null ? null : S.bc.reporting(Math.round(p)));
 
 function Cands({ b, delay }: { b: CandBlock; delay: number }) {
   return (
     <div className={"cb" + (b.small ? " small" : "") + (b.title.length > 10 ? " longt" : "") + (b.ward ? " district" : "")} style={b.ward ? { ["--dc" as any]: DISTRICT_COLORS[b.ward]?.fill } : undefined}>
       <div className="ct">
         <div className="tt">{b.title}</div>
-        {inText(b.pctIn) && <div className="meta">{inText(b.pctIn)}</div>}
         {b.seats > 1 && <div className="meta">{S.bc.seats(b.seats)}</div>}
+        {b.called && <div className="meta">{S.called}</div>}
       </div>
       <div className="cl">
         {b.cands.map((c, k) => (
@@ -89,7 +88,7 @@ function Measure({ b, delay }: { b: MeasureBlock; delay: number }) {
       </div>
       <div className="rv">
         <div className="yes"><small>{S.yes}</small>{b.counted ? <Num value={b.yes} delay={delay} /> : S.none}</div>
-        <div className="needs">{b.called ? <><Check />{b.yes >= b.th ? S.passes : S.fails}</> : S.needs(b.needs)}</div>
+        <div className="needs">{b.called ? <><Check />{b.passed ? S.passes : S.fails} · {S.called}</> : S.needs(b.needs)}</div>
       </div>
     </div>
   );
@@ -98,7 +97,7 @@ function Measure({ b, delay }: { b: MeasureBlock; delay: number }) {
 function Big({ b, delay }: { b: BigBlock; delay: number }) {
   return (
     <div className="bb">
-      <div className="bh"><span className="tt">{b.title}</span><span className="box">{b.called ? <><Check />{b.yes >= b.th ? S.passes : S.fails}</> : S.needs(b.needs)}</span></div>
+      <div className="bh"><span className="tt">{b.title}</span><span className="box">{b.called ? <><Check />{b.passed ? S.passes : S.fails} · {S.called}</> : S.needs(b.needs)}</span></div>
       {b.label && <div className="lbl">{b.label}</div>}
       <div className="yn">
         <span className="y"><small>{S.yes}</small>{b.counted ? <Num value={b.yes} delay={delay} /> : S.none}</span>
@@ -106,7 +105,6 @@ function Big({ b, delay }: { b: BigBlock; delay: number }) {
         <span className="n"><small>{S.no}</small>{b.counted ? <Num value={b.no} delay={delay} /> : S.none}</span>
       </div>
       <div className="bar big"><i style={{ width: (b.counted ? b.yes : 0) + "%", animationDelay: delay + "ms" }} /><b style={{ left: b.th + "%" }} /></div>
-      {inText(b.pctIn) && <div className="meta">{inText(b.pctIn)}</div>}
     </div>
   );
 }

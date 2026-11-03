@@ -6,14 +6,14 @@ const DIGITS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "
 
 export const S = {
   // ---------- shared ----------
-  pageTitle: "Berkeley election night results",   // the browser tab
-  masthead: "Election Night in Berkeley",
+  pageTitle: "Berkeley midterm election results",   // the browser tab
+  masthead: "Election night in Berkeley",
   paper: "The Daily Californian",
   california: "California",
   alamedaCounty: "Alameda County",
   statewide: "Statewide",
   governor: "Governor",
-  measureRtm: "Measure RTM",
+  measureRtm: "Regional Transit Measure",
   rtmCounties: "Alameda, Contra Costa, San Francisco, San Mateo and Santa Clara counties",
   yes: "Yes",
   no: "No",
@@ -28,7 +28,7 @@ export const S = {
   prop: n => `Prop ${n}`,
   measure: letter => `Measure ${letter}`,
   district: n => `District ${n}`,
-  councilDistrict: n => `City Council, District ${n}`,
+  councilDistrict: n => `District ${n}`,
   house: cd => `U.S. House, District ${cd}`,
   twoThirds: "two-thirds",
 
@@ -58,29 +58,21 @@ export const S = {
   levelsLabel: "Level of results",
   levels: { city: "City", congress: "Congress", county: "Region", state: "State" },
   noLevel: "—",
-  testData: "Test data, not real results.",
-  feeds: { sos_state: "Secretary of State", sos_alameda: "SoS Alameda feed", alameda: "Alameda County", gov_state: "SoS governor", gov_alameda: "SoS Alameda governor" },
   notResponding: names => `Not responding: ${names.join(", ")}. Showing the last numbers received.`,
-  cantReach: "Can’t reach the tracker. Showing the last numbers received.",
+  cantReach: "Error with tracker. Showing the last numbers received.",
   legend: "Legend",
   withinThree: "Within 3 points",
 
   // ---------- errors ----------
-  brokePart: label => `Something went wrong showing ${label}. It will retry with the next update.`,
-  partMap: "the map",
-  partResults: "these results",
-  partBroadcast: "the broadcast",
+  brokePart: label => `Something went wrong showing ${label}. Will retry with the next update.`,
   needServer: "Open through a web server (python3 tracker.py --serve 8077)",
-  resultsTimedOut: "results.json timed out",
-  resultsBadFormat: "results.json is not in the expected format",
-  mapFailed: err => `The map could not be loaded (${err}).`,
-  noWebgl: "WebGL is not available",
 
   // ---------- map and strip ----------
   mapLabel: "Map of results by area",
   cardsLabel: "Races on the map",
   stripLabel: "Every race on Berkeley ballots",
-  decidedTip: "Decided: the trailing side can’t catch up",
+  raceMenuTitle: "Races",
+  raceGroups: { berkeley: "Berkeley district races", measures: "Local measures", state: "Statewide races", rtm: "RTM" },
   leadsBy: margin => `Leads by ${margin} points`,
   moreRaces: "More races",
   moreRacesN: n => `+${n} more race${n === 1 ? "" : "s"}`,
@@ -113,7 +105,7 @@ export const S = {
   panelLabel: "Race details",
   includesBerkeley: "Includes Berkeley",
   pickRace: "Pick a race on the map.",
-  onTheBallot: "On the ballot",
+  onTheBallot: "About the measure",
   sosLabel: "Ballot label from the Secretary of State.",
   source: "Source",
   sourcesLead: "Unofficial results. Sources:",
@@ -121,9 +113,7 @@ export const S = {
     { text: "California Secretary of State", href: "https://www.sos.ca.gov/elections/prior-elections/statewide-election-results" },
     { text: "Alameda County Registrar of Voters", href: "https://acvote.alamedacountyca.gov/" },
   ],
-  sourcesTail: "RTM county registrars.",
-  calledBy: when => `Called by The Daily Californian at ${when}.`,
-  decidedAt: when => `Decided at ${when}: the trailing side can’t catch up with the ballots left to count.`,
+  calledBy: "This race has been called by The Associated Press.",
   winner: "Winner",
   candidate: "Candidate",
   votes: "Votes",
@@ -131,15 +121,9 @@ export const S = {
   voteFor: n => `Vote for ${n}`,
   needsToPass: share => `Needs ${share} to pass`,
   reporting: s => `${s} reporting`,
-  rcvNote: "Ranked-choice race. These are first choices; if no one has a majority, the county’s later rounds decide the winner.",
-  propNotPosted: n => `The Secretary of State hasn’t posted Prop. ${n} yet.`,
-  inAlameda: (yes, no) => `In Alameda County: Yes ${yes}, No ${no}.`,
-  inAlamedaHead: "In Alameda County",
+  rcvNote: "This is a ranked-choice race. These are first-choice votes only; if no one has a majority, the county’s later rounds decide the winner.",
   yesOverTime: "Yes share over time",
-  yesOverTimeLabel: n => `Yes share of the vote on Prop ${n} over time`,
   countiesReporting: n => `${n} of 5 counties reporting.`,
-  fiveCounties: "Five counties",
-  partialCounties: "Partial until all five counties report.",
 
   // ---------- the Instagram broadcast ----------
   bc: {
@@ -159,6 +143,6 @@ export const S = {
     majority: "a majority",
     twoThirdsTick: "Two-thirds",
     majorityTick: "Majority",
-    footer: when => `Unofficial results, updated ${when}. Full results at dailycal.org.`,
+    footer: when => `Unofficial results, updated ${when}. More results and updates at dailycal.org.`,
   },
 };

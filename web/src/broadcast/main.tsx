@@ -9,6 +9,6 @@ document.title = S.bc.pageTitle;
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <ErrorBoundary label={S.partBroadcast}><Broadcast /></ErrorBoundary>
+    <ErrorBoundary label="broadcast" silent><Broadcast /></ErrorBoundary>
   </StrictMode>,
 );

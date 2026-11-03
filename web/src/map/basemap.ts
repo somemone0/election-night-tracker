@@ -10,7 +10,10 @@ export function boardStyle(st: StyleSpecification): StyleSpecification {
   for (const l of st.layers as any[]) {
     const p = (l.paint = l.paint || {});
     if (l.type === "background") p["background-opacity"] = 0;
-    else { p["line-color"] = "#FFFFFF"; p["line-opacity"] = 0.92; }   // white streets, as in the district cutouts
+    else {
+      p["line-color"] = "#FFFFFF";
+      p["line-opacity"] = l.id === "highway_minor" ? 0.35 : 0.92;
+    }
   }
   return st;
 }

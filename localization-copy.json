@@ -1,0 +1,48 @@
+{
+  "strings": {
+    "pageTitle": "Berkeley midterm election results",
+    "masthead": "Election night in Berkeley",
+    "rtmCounties": "Alameda, Contra Costa, San Francisco, San Mateo and Santa Clara counties",
+    "noVotes": "No votes counted yet",
+    "yesNeeds": "Yes at {yes}, needs {needs}",
+    "sideLeads": "{side} leads by {margin} points",
+    "cantReach": "Error with tracker. Showing the last numbers received.",
+    "clusterLabel": "{title}: {n} races. Zoom in.",
+    "leadingBy": "{who} leading by {margin} points, {votes} votes",
+    "pickRace": "Pick a race on the map.",
+    "sourcesLead": "Unofficial results. Sources:",
+    "calledBy": "This race has been called by The Associated Press.",
+    "rcvNote": "This is a ranked-choice race. These are first-choice votes only; if no one has a majority, the county’s later rounds decide the winner.",
+    "countiesReporting": "{n} of 5 counties reporting.",
+    "bc": {
+      "rcvNote": "Ranked-choice. Final results pending.",
+      "footer": "Unofficial results, updated {when}. More results and updates at dailycal.org."
+    }
+  },
+  "ballot": {
+    "Measure RTM": {
+      "question": "Originally termed the Connect Bay Area Measure, the Regional Transit Measure would impose a half-cent sales tax in Alameda, Contra Costa, San Mateo and Santa Clara counties if passed. It would also impose a one-cent sales tax in San Francisco.\n\nSupporters include state Sens. Jesse Arreguín and Scott Wiener, U.S. Rep. Nancy Pelosi and the Service Employees International Union Local 1021, according to KQED.\n\n“BART, perhaps more than any other transit agency in the country pre-pandemic, relied on fares to pay for its operating costs. That just simply doesn’t work in a new reality when people are riding transit less,” said BART spokesperson Chris Filippi to the Daily Cal for an earlier article. “What we need is a new funding model going forward. But in the meantime, what we can focus on is what we can control, which is providing the best BART experience possible to get as many riders as possible.”"
+    },
+    "Measure U": {
+      "question": "If passed, the measure will approve up to $300 million in general obligation bonds for response facilities, parks and seismic and climate resilience upgrades, as well as replacing natural gas infrastructure. The measure was unanimously placed on the ballot by the Berkeley City Council earlier this year.\n\nA general obligation bond is a type of loan taken out by a city, county or state to pay for public projects, which is then paid back using the government’s power to collect taxes meant to pay bondholders, if necessary. For local governments, this usually comes in the form of property taxes.\n\nOne endorsement for Measure U comes from Berkeley Architectural Heritage Association, which is a proponent of the seismic retrofitting of some of Berkeley’s historic landmark buildings. However, coalition Affordable Berkeley opposes on the grounds that $550 million to $600 million will be the total cost of this measure, with no commitment to specific projects."
+    },
+    "Measure V": {
+      "question": "If passed, Measure V would add 0.5% to Berkeley’s sales tax in order to reflect the rate in most Alameda County cities. Berkeley’s sales tax rate is currently 10.25%, while most other cities in Alameda County, including Alameda, Albany, Hayward, Newark, Oakland, San Leandro and Union City are all at 10.75%.\n\nThis measure will help to close Berkeley’s General Fund budget gap, generating an estimated $9 million to $10 million per year.\n\nOpponents of Measure V, such as Affordable Berkeley, say it creates a regressive tax which would hurt the most vulnerable. Regressive taxes are those that create a larger burden on lower-income taxpayers than on middle- or higher-income taxpayers."
+    },
+    "Measure W": {
+      "question": "This measure, if passed, would drop the filing fee from $150 to $25; it would also raise the public financing cap from $250,000 to $400,000.\n\nFurther, it would remove the requirement to list place of birth, taxpayer status or place of residence on candidate statements. This update would prevent nativism and wealth screening and increase safety by not disclosing addresses of candidates, according to the League of Women Voters of Berkeley Albany Emeryville."
+    },
+    "Measure X": {
+      "question": "Rent is expensive throughout Berkeley, especially for students living close to campus. Measure X, if passed, would amend Berkeley’s Rent Stabilization and Eviction for Just Cause Ordinance in several ways, including capping any periodic rent increase at 10% even when a landlord has banked prior annual adjustments. Berkeley’s current Rent Stabilization and Eviction for Just Cause Ordinance, commonly known as the Rent Ordinance, is meant to maintain affordable housing and community diversity.\n\nThough opponents argue that tighter rent controls might discourage development and managing the new rules could strain municipal budgets, the measure is supported by the Berkeley Tenants Union because it protects tenants to a larger capacity."
+    },
+    "Measure Y": {
+      "question": "If passed, this 12-year parcel tax would create a new Arts Vitality Fund. The funds generated would go toward local performing arts organizations and civic arts programs. The measure would establish a parcel tax of $0.07 per square foot on properties and is expected to generate more than $5.5 million annually.\n\n“It’s a tax, but there will be a net gain in property values for folks, because it keeps the city a vibrant place to live, and it’s also great for all the surrounding businesses,” said Shotgun Players artistic director Patrick Dooley to The Daily Californian for an earlier article.\n\nWhile organizations such as The UC Theatre, Berkeley Playhouse and Berkeley Symphony all support the measure, opponents say that this alignment makes Measure Y a special-interest tax."
+    },
+    "Measure Z": {
+      "question": "This second parcel tax measure proposes a tax to create a new public bank. This bank would invest in long-term affordable housing, green energy and infrastructure and small businesses in Berkeley. The tax sunsets after six years.\n\nOpponents Stop Measure Z and Affordable Berkeley claim that the measure would entail that Berkeley homes and businesses are taxed a total of $58 million over six years, while Oakland and Alameda County would pay nothing.\n\nDespite this, Aaryaman “Sunny” Singhal, a board member for Public Bank East Bay — the recipient of the tax revenue — said to the Daily Cal in a previous article that the bank is a “low-cost model,” lending to institutions rather than individuals. He explained that the bank would therefore likely be able to provide loans at interest rates lower than those of typical private banks."
+    },
+    "Measure AA": {
+      "question": "Measure AA, if passed, would up the existing soda tax from 1 cent to 2 cents per fluid ounce.\n\nProceeds from the tax, first passed in 2014, will be reserved for projects that fight diet-related conditions such as Type 2 diabetes, obesity, heart disease and tooth decay, and provide public health and nutrition education.\n\nThe sugar-sweetened beverage special tax is supported by the Alameda-Contra Costa Medical Association and, according to KQED, opposed by the American Beverage Association California."
+    }
+  }
+}

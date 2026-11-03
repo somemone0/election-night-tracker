@@ -17,8 +17,8 @@ export interface CandBlock {
   seats: number; partisan: boolean; small: boolean;
   ward?: string;                           // council district number, for its cutout color
 }
-export interface MeasureBlock { kind: "measure"; key: string; letter: string; label: string; yes: number; counted: boolean; th: number; needs: string; called: boolean }
-export interface BigBlock { kind: "big"; key: string; title: string; label: string; yes: number; no: number; counted: boolean; th: number; needs: string; pctIn: number | null; called: boolean }
+export interface MeasureBlock { kind: "measure"; key: string; letter: string; label: string; yes: number; counted: boolean; th: number; needs: string; called: boolean; passed: boolean }
+export interface BigBlock { kind: "big"; key: string; title: string; label: string; yes: number; no: number; counted: boolean; th: number; needs: string; pctIn: number | null; called: boolean; passed: boolean }
 export type Block = CandBlock | MeasureBlock | BigBlock;
 /** tab: the name in the tab bar; kicker over the section title, as on the website's detail panel */
 export interface Slide { key: string; tab: string; kicker: string; section: string; note: string | null; blocks: Block[] }
@@ -50,7 +50,7 @@ const measureLetter = (title: string) => /Measure\s+([A-Z]{1,3})\b/.exec(title)?
 
 function measureBig(key: string, title: string, label: string, m: MeasureCount, rule: string | null | undefined, p: Precincts | null | undefined): BigBlock {
   const th = threshold(rule);
-  return { kind: "big", key, title, label, yes: m.yes_pct, no: m.no_pct, counted: m.yes + m.no > 0, th, needs: needsText(th), pctIn: pctIn(p), called: !!m.call };
+  return { kind: "big", key, title, label, yes: m.yes_pct, no: m.no_pct, counted: m.yes + m.no > 0, th, needs: needsText(th), pctIn: pctIn(p), called: !!m.call, passed: m.call?.winners[0] === "Yes" };
 }
 
 export function buildSlides(D: Results | null, ballot: Ballot, cfg: BroadcastConfig = DEFAULT_CONFIG): Slide[] {
@@ -73,7 +73,7 @@ export function buildSlides(D: Results | null, ballot: Ballot, cfg: BroadcastCon
     key: "measures", tab: S.bc.tabs.measures, kicker: S.bc.kickers.berkeley, section: S.bc.sections.measures, note: null,
     blocks: meas.map(r => {
       const letter = measureLetter(r.title), th = threshold(r.rule);
-      return { kind: "measure", key: r.id, letter, label: ballot[S.measure(letter)]?.short ?? r.title.replace(/\s*-\s.*$/, ""), yes: r.yes_pct, counted: r.yes + r.no > 0, th, needs: needsText(th), called: !!r.call } as MeasureBlock;
+      return { kind: "measure", key: r.id, letter, label: ballot[S.measure(letter)]?.short ?? r.title.replace(/\s*-\s.*$/, ""), yes: r.yes_pct, counted: r.yes + r.no > 0, th, needs: needsText(th), called: !!r.call, passed: r.call?.winners[0] === "Yes" } as MeasureBlock;
     }),
   });
 
@@ -84,7 +84,7 @@ export function buildSlides(D: Results | null, ballot: Ballot, cfg: BroadcastCon
 
   // 4. Measure RTM, five counties combined, and any countywide measures
   const bay: Block[] = [];
-  const rtmA = rtmRace(D), label = ballot[S.measureRtm]?.short ?? S.bc.rtmFallback;
+  const rtmA = rtmRace(D), label = ballot["Measure RTM"]?.short ?? S.bc.rtmFallback;
   if (D.rtm) {
     const ps = D.rtm.counties.map(c => c.precincts).filter((p): p is Precincts => !!p);
     const done = ps.reduce((s, p) => s + p.done, 0), total = ps.reduce((s, p) => s + p.total, 0);

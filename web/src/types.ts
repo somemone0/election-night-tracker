@@ -2,8 +2,8 @@
 
 export interface Precincts { done: number; total: number; pct: number }
 
-/** A race call (see calls.py): an editor's desk call, or decided by the count (the trailing side cannot catch up). */
-export interface Call { winners: string[]; how: "desk" | "decided"; at: string }
+/** A race call (see calls.py): an AP call transcribed by an editor. */
+export interface Call { winners: string[]; how: "ap"; at: string }
 
 export interface MeasureCount {
   yes: number; no: number; yes_pct: number; no_pct: number;

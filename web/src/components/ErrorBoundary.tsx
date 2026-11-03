@@ -2,7 +2,7 @@
 import { Component, type ReactNode } from "react";
 import { S } from "../strings";
 
-export class ErrorBoundary extends Component<{ label: string; children: ReactNode; resetKey?: unknown }, { error: Error | null }> {
+export class ErrorBoundary extends Component<{ label: string; children: ReactNode; resetKey?: unknown; silent?: boolean }, { error: Error | null }> {
   state = { error: null as Error | null };
   static getDerivedStateFromError(error: Error) { return { error }; }
   componentDidCatch(error: Error) { console.error(`[${this.props.label}]`, error); }
@@ -10,7 +10,7 @@ export class ErrorBoundary extends Component<{ label: string; children: ReactNod
     if (this.state.error && prev.resetKey !== this.props.resetKey) this.setState({ error: null });   // try again on new data
   }
   render() {
-    if (this.state.error) return <p className="empty">{S.brokePart(this.props.label)}</p>;
+    if (this.state.error) return this.props.silent ? null : <p className="empty">{S.brokePart(this.props.label)}</p>;
     return this.props.children;
   }
 }
