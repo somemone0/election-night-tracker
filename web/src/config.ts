@@ -5,12 +5,16 @@ export const CONFIG = {
   masthead: S.masthead,   // title in the top bar
   results: "data/results.json",
   history: "data/history.json",
+  // Set at build time to read results from the Google Sheet instead of the tracker (README, "Hosting on data.dailycal.org"):
+  // the Page tab's publish-to-web CSV link, or the sheet's Apps Script /exec URL.
+  sheet: (import.meta.env.VITE_SHEET_URL as string | undefined) ?? "",
   headshots: "img/headshots/index.json",
   measures: "measures.json",                          // ballot question text, typed in by the desk (see README)
   geo: { state: "geo/state.json", county: "geo/county.json", congress: "geo/congress.json", city: "geo/city.json", ward: "geo/ward.json" },
-  refreshMs: 15000,
+  refreshMs: import.meta.env.VITE_SHEET_URL ? 60000 : 15000,   // the tracker writes the sheet once a minute
   fetchTimeoutMs: 10000,
-  staleAfterMs: 5 * 60 * 1000,
+  // A published sheet can lag up to five minutes behind the tracker, so "last updated" waits longer there.
+  staleAfterMs: (import.meta.env.VITE_SHEET_URL ? 12 : 5) * 60 * 1000,
   start: { level: "city", id: "Berkeley" } as View,   // what the page opens on
   localCities: ["Berkeley"],                          // only these cities get city-level results, cards and tooltips
   // Zoom bands, in MapLibre zoom adjusted for map size (see effectiveZoom): above 11.5 city, 7.5 Bay Area (the five RTM

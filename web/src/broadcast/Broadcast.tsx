@@ -157,8 +157,8 @@ export function Broadcast() {
             const delay = FIRST_ROW_MS + j * ROW_GAP_MS;
             return <div key={b.key} className={"blk " + b.kind} style={{ animationDelay: delay + "ms" }}><BlockView b={b} delay={delay} /></div>;
           })}
-          <div className="foot" style={{ animationDelay: FIRST_ROW_MS + cur.blocks.length * ROW_GAP_MS + "ms" }}>{S.bc.footer(updated.replace(/\.$/, ""))}</div>
         </main>
+        <footer className="foot">{S.bc.footer(updated.replace(/\.$/, ""))}</footer>
       </div>
     </div>
   );

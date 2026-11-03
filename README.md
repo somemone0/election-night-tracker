@@ -109,6 +109,16 @@ RTM (the regional transit sales tax) is decided by the combined vote in Alameda,
 San Mateo and Santa Clara counties. `rtm.py` adds them up each poll; the page shows only the five-county total, and
 leaves out any county it can't read yet (the total says "x of 5 counties" until all five are in).
 
+**MTC first.** The district posts its own combined total at
+`https://mtc.ca.gov/about-mtc/authorities/public-transit-revenue-measure-district` (the "Election Results" section,
+from about 9 p.m. Nov. 3). The `MTC` entry in `rtm_sources.json` points at it. Once that section shows Yes and No
+totals, the tracker uses them as the five-county total and stops reading the counties (counted as all five in). Before
+that, or if the page breaks, it falls back to the county sum below. Set the entry's `url` to `null` to always use the
+counties. `parse_mtc` reads any layout where Yes and No are each followed by a vote count (a table or plain text),
+and ignores percentages; **check it against the page once MTC posts**, since the layout wasn't published beforehand.
+The tracker follows MTC's update schedule, which can lag the counties. Race calls still come from the desk
+(`calls.json`), since MTC gives no per-county outstanding ballots.
+
 | County | Source | Before election night |
 |---|---|---|
 | Alameda | the county results page the tracker already reads | nothing to do |
@@ -208,7 +218,10 @@ site/classic.html the previous single-file page, kept as a fallback
 site/geo/         map boundaries (state, county, congress, city)
 tools/build_geo.py  rebuilds site/geo from the official sources
 tools/prepare_headshots.py  resizes the headshot folder into site/img/headshots (needs Pillow)
-rtm.py            Measure RTM: reads the four other counties and adds up the five-county total
+tools/build_dailycal.sh  builds the page for data.dailycal.org, reading results from the Google Sheet
+sheet.py          the Google Sheet link: drops, hand edits, and the Page tab the hosted page reads
+tools/sheet/Code.gs  the sheet's Apps Script
+rtm.py            Measure RTM: MTC's combined total, else the four other counties added up
 rtm_sources.json  where each county's RTM results come from (set Clarity addresses on election night)
 rtm_manual.example.json  template for hand-entered numbers (San Francisco)
 calls.py          AP calls transcribed by editors into calls.json
@@ -239,6 +252,64 @@ To stream: in OBS, set the canvas and output to 1080x1920, add a Browser source 
 `https://election-tracker-385939155005.us-west1.run.app/broadcast.html` (1080x1920), then on instagram.com (a
 professional account) choose Create, then Live, paste the server URL and stream key into OBS, Start Streaming, and
 Go Live. Instagram ends a live stream after about four hours, so plan one restart.
+
+## Google Sheet (drops and hand edits)
+
+Optional. The tracker sends every vote count the page shows to a Google Sheet, one row per ballot drop, and the desk
+can correct a count there:
+
+* **Drops tab:** one column per count (a candidate, or a measure's Yes or No), one row each time any count moves,
+  newest at the bottom. Counts that didn't move carry over from the row above.
+* **Hand edits:** change a count in the last row. It goes on the page 5 minutes later (the cell gets a note saying
+  when). Change it again within the 5 minutes and the clock restarts, so the earlier value is never shown. If that
+  count moves in a new drop before then, the edit is dropped and is never shown. A live edit carries forward to new
+  rows until its count moves. Edits to older rows do nothing.
+* If the sheet can't be reached, the page keeps its last edits (except where the count has since moved) and shows
+  "Not responding: Google Sheet".
+
+Setup, once:
+
+1. Make a Google Sheet. Extensions, then Apps Script: paste `tools/sheet/Code.gs`, save.
+2. In Apps Script, Project Settings, Script properties: add `SECRET` with a long random value.
+3. Deploy, New deployment, Web app: Execute as Me, Who has access Anyone. Copy the `/exec` URL. (Only callers with the
+   secret get in.)
+4. Run the tracker with `SHEET_URL=<the /exec URL> SHEET_SECRET=<the secret> python3 tracker.py ...` (or
+   `--sheet-url`). On Cloud Run, set both as environment variables (the secret through Secret Manager).
+
+The first poll builds the tab. The hold is `--sheet-hold` (seconds, default 300). Code: `sheet.py`, tests in
+`tests/test_sheet.py`.
+
+After changing `Code.gs`, paste it again and use Deploy, Manage deployments, edit, Version: New version. That keeps
+the same `/exec` URL. A brand-new deployment gets a new URL.
+
+## Hosting on data.dailycal.org
+
+The page can live on data.dailycal.org with no server behind it. The tracker runs anywhere (sonofthirtyninety) and
+writes to the sheet; the page reads the sheet:
+
+```
+tracker.py (polls the feeds)  ->  Google Sheet (Drops, Page tabs)  ->  data.dailycal.org/election-2026/ (reads Page)
+```
+
+* After every poll the tracker writes the finished results (with hand edits and calls) and the end of the history to
+  the sheet's **Page** tab, split across cells. Don't edit that tab.
+* The page reads it one of two ways. Publish to web (File, Share, Publish to web: the Page tab, CSV) is served by
+  Google's cache, so it holds up under any number of readers, but Google can take up to 5 minutes to refresh it. The
+  Apps Script `/exec` URL is current within seconds, but Google runs only about 30 at once per owner, so it can fail
+  under heavy traffic.
+* When reading the sheet, the page refreshes once a minute and says "last updated" only after 12 minutes without new
+  numbers.
+
+Build and copy into the data site
+([dailycal-projects/dailycalprojects](https://github.com/dailycal-projects/dailycalprojects), a Gatsby site on
+Netlify; everything in `static/` is served as is):
+
+```sh
+VITE_SHEET_URL='<the Page tab CSV link or the /exec URL>' tools/build_dailycal.sh ../dailycalprojects/static/election-2026
+```
+
+That serves the tracker at `data.dailycal.org/election-2026/` and the broadcast at `.../election-2026/broadcast.html`.
+Rebuild only when the page's code, `measures.json` or the headshots change. New numbers come through the sheet.
 
 ## Cloud Run
 

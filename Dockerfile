@@ -14,7 +14,7 @@ RUN npx tsc --noEmit && npx vite build
 FROM python:3.12-slim
 WORKDIR /app
 ENV PYTHONUNBUFFERED=1
-COPY tracker.py alameda_parse.py rtm.py calls.py mock_server.py rtm_sources.json ./
+COPY tracker.py alameda_parse.py rtm.py calls.py sheet.py mock_server.py rtm_sources.json ./
 COPY fixtures/ fixtures/
 COPY --from=web /src/site/ site/
 RUN mkdir -p site/data
@@ -22,6 +22,7 @@ RUN mkdir -p site/data
 # Cloud Run); all are re-read every poll, so updating them needs no redeploy.
 # MOCK=1 runs a simulated election night instead of the real sources (for demos; the page says it is test data),
 # starting MOCK_START minutes after polls close and advancing MOCK_SPEED simulated minutes per second.
+# SHEET_URL and SHEET_SECRET (optional) link the Google Sheet of drops and hand edits (sheet.py, tools/sheet/Code.gs).
 ENV PORT=8080 RTM_CONFIG=/app INTERVAL=60 MOCK=0 MOCK_START=0 MOCK_SPEED=2
 CMD if [ "$MOCK" = "1" ]; then \
       exec python3 tracker.py --serve "$PORT" --host 0.0.0.0 --interval 10 --mock --start "$MOCK_START" --speed "$MOCK_SPEED" --calls "$RTM_CONFIG/calls.json"; \

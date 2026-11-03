@@ -35,6 +35,30 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(rtm.from_clarity("x", lambda u: pages[u])[:2], (10, 7))
 
 
+class MtcTests(unittest.TestCase):
+    page = "<h2>Notices</h2><p>No later than 5 days</p><h2>Election Results</h2>%s<h2>Staff Contact</h2><p>Yes 9</p>"
+
+    def test_placeholder_is_not_results(self):
+        html = self.page % "<p>This webpage will be updated with results beginning at approximately 9:00 p.m. on November 3, 2026. Needs more than 50%.</p>"
+        with self.assertRaises(LookupError):
+            rtm.parse_mtc(html)
+
+    def test_table_and_text_layouts(self):
+        table = "<table><tr><th>Choice</th><th>Votes</th><th>%</th></tr><tr><td>Yes</td><td>1,234,567</td><td>54.32%</td></tr><tr><td>No</td><td>1,000,000</td><td>45.68%</td></tr></table>"
+        self.assertEqual(rtm.parse_mtc(self.page % table)[:2], (1234567, 1000000))
+        self.assertEqual(rtm.parse_mtc(self.page % "<p>Yes: 700 (58.3%)<br>No: 500 (41.7%)</p>")[:2], (700, 500))
+
+    def test_collect_prefers_mtc_then_falls_back(self):
+        pages = {"mtc": (self.page % "<p>Yes 600 No 400</p>").encode()}
+        fetch = lambda u: pages["mtc"] if u == "mtc" else (_ for _ in ()).throw(OSError("counties must not be read"))
+        out = rtm.collect([], fetch, {"MTC": {"url": "mtc"}}, {})
+        self.assertEqual((out["total"]["yes"], out["total"]["no"], out["source"], out["complete"]), (600, 400, "MTC", True))
+        pages["mtc"] = (self.page % "<p>Results coming soon.</p>").encode()   # not posted: counties are used (here, Alameda only)
+        alameda = [{"title": "Measure RTM", "yes": 60, "no": 40, "precincts": None}]
+        out = rtm.collect(alameda, lambda u: pages["mtc"] if u == "mtc" else (_ for _ in ()).throw(OSError("x")), {"MTC": {"url": "mtc"}}, {})
+        self.assertEqual((out["total"]["yes"], out["counties_in"], out["complete"]), (60, 1, False))
+
+
 class CollectTests(unittest.TestCase):
     alameda = [{"title": "Measure RTM - Public Transit Revenue Measure District", "yes": 60, "no": 40, "precincts": None}]
 

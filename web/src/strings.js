@@ -66,6 +66,7 @@ export const S = {
   // ---------- errors ----------
   brokePart: label => `Something went wrong showing ${label}. Will retry with the next update.`,
   needServer: "Open through a web server (python3 tracker.py --serve 8077)",
+  sheetFailed: status => `Can’t reach the results sheet (HTTP ${status}).`,
 
   // ---------- map and strip ----------
   mapLabel: "Map of results by area",

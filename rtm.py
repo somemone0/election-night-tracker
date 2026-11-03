@@ -10,6 +10,10 @@ RTM passes or fails on the combined vote, so the tracker adds up each county's c
                  (numbers typed in from the page) is used whenever the page cannot be read
 
 Any county can also be filled from rtm_manual.json, which is only used when the automated source fails.
+
+MTC (the district) posts the combined five-county total on its own page from about 9 p.m. on election night. When
+rtm_sources.json has an "MTC" entry with a url and that page shows Yes and No totals, those are used as the total and
+the counties are not read. Until it does (or if it breaks), the county-by-county sum above is the fallback.
 """
 import csv
 import gzip
@@ -17,6 +21,7 @@ import io
 import json
 import re
 from datetime import datetime, timezone
+from html import unescape
 from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import urljoin
@@ -159,6 +164,29 @@ def from_sfelections(url, fetch):
     return parse_sfelections(fetch(url).decode("utf-8", "replace"))
 
 
+def parse_mtc(html):
+    """MTC's measure page: an 'Election Results' heading, then text or a table with the Yes and No totals.
+    Until results are posted that section is a notice with no Yes/No figures, which raises LookupError."""
+    m = re.search(r"<h2[^>]*>\s*Election Results\s*</h2>(.*?)(?=<h2|\Z)", html, re.S | re.I)
+    if not m:
+        raise LookupError("no 'Election Results' section on the MTC page")
+    text = " ".join(unescape(re.sub(r"<[^>]+>", " ", m.group(1))).split())
+    labels = list(re.finditer(r"\b(yes|no)\b", text, re.I))
+    got = {}
+    for i, lab in enumerate(labels):   # the first whole number after each label, before the next one (skips 54.3% / 54.3)
+        seg = text[lab.end():labels[i + 1].start() if i + 1 < len(labels) else len(text)][:80]
+        nums = [t for t in re.findall(r"\d[\d,]*(?:\.\d+)?%?", seg) if not t.endswith("%") and "." not in t]
+        if nums:
+            got.setdefault(lab.group(1).lower(), _int(nums[0]))
+    if "yes" not in got or "no" not in got:
+        raise LookupError("MTC has not posted Yes/No totals yet")
+    return got["yes"], got["no"], None
+
+
+def from_mtc(url, fetch):
+    return parse_mtc(fetch(url).decode("utf-8", "replace"))
+
+
 SOURCES = {"clarity": from_clarity, "smcacre": from_smcacre, "sfelections": from_sfelections}
 SOURCE_NAMES = {"clarity": "county results (Clarity)", "smcacre": "county CSV export", "sfelections": "SF Department of Elections"}
 
@@ -171,8 +199,32 @@ def load_json(path):
         return {}
 
 
+def _total(yes, no):
+    total = yes + no
+    tot = {"yes": yes, "no": no, "total": total,
+           "yes_pct": round(100 * yes / total, 2) if total else 0.0, "no_pct": round(100 * no / total, 2) if total else 0.0,
+           "leader": None if not total else "tied" if yes == no else ("yes" if yes > no else "no")}
+    tot["margin"] = round(abs(tot["yes_pct"] - tot["no_pct"]), 2)
+    return tot
+
+
+def _district(yes, no):
+    """The combined total as MTC reports it: no per-county rows, and it counts as all five counties in."""
+    return {"counties": [], "total": _total(yes, no), "rule": RULE, "source": "MTC",
+            "counties_in": len(COUNTIES), "counties_counting": len(COUNTIES), "complete": True,
+            "at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+
+
 def collect(alameda_races, fetch, sources, manual):
     """-> {'counties': [...], 'total': {...}, 'counties_in': n, 'counties_counting': n, 'complete': bool, 'rule': ...}"""
+    mtc_url = (sources.get("MTC") or {}).get("url")
+    if mtc_url:   # the district's own combined total, when it has posted one
+        try:
+            yes, no, _ = from_mtc(mtc_url, fetch)
+            if yes + no > 0:
+                return _district(yes, no)
+        except Exception:
+            pass   # not posted yet, or the page changed: use the counties below
     rows = []
     for name in COUNTIES:
         hand = manual.get(name) if isinstance(manual.get(name), dict) else None
@@ -194,12 +246,7 @@ def collect(alameda_races, fetch, sources, manual):
             else:
                 rows.append(_county(name, 0, 0, None, None, "waiting" if isinstance(e, NotConfigured) else "error", reason))
     have = [r for r in rows if r["status"] in ("ok", "manual")]
-    yes, no = sum(r["yes"] for r in have), sum(r["no"] for r in have)
-    total = yes + no
-    tot = {"yes": yes, "no": no, "total": total,
-           "yes_pct": round(100 * yes / total, 2) if total else 0.0, "no_pct": round(100 * no / total, 2) if total else 0.0,
-           "leader": None if not total else "tied" if yes == no else ("yes" if yes > no else "no")}
-    tot["margin"] = round(abs(tot["yes_pct"] - tot["no_pct"]), 2)
+    tot = _total(sum(r["yes"] for r in have), sum(r["no"] for r in have))
     return {
         "counties": rows, "total": tot, "rule": RULE,
         "counties_in": len(have), "counties_counting": sum(1 for r in have if r["yes"] + r["no"] > 0),

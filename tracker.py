@@ -14,6 +14,7 @@ Once:   python3 tracker.py --once --sos-base http://127.0.0.1:8765 --alameda-bas
 import argparse
 import csv
 import json
+import os
 import re
 import sys
 import threading
@@ -28,6 +29,7 @@ from pathlib import Path
 import alameda_parse
 import calls
 import rtm
+import sheet
 
 HERE = Path(__file__).resolve().parent
 SOS_BASE = "https://api.sos.ca.gov"
@@ -337,6 +339,7 @@ def write_outputs(out_dir, snap):
     with open(tmp, "w", newline="") as f:
         csv.writer(f).writerows(lines)
     tmp.replace(out_dir / "races.csv")
+    return hist
 
 
 def atomic_write(path, text):
@@ -348,8 +351,10 @@ def atomic_write(path, text):
 # --------------------------------------------------------------------------- poll loop
 class Tracker:
     def __init__(self, sos_base, alameda_base, election_id, out_dir, mock=False, rtm_sources=None, rtm_manual=None, rtm_sources_path=None,
-                 calls_path=None):
+                 calls_path=None, sheet_link=None):
         self.mock = mock
+        self.sheet = sheet_link   # sheet.Sheet: the Google Sheet of drops and hand edits, or None
+        self.page_error = None    # the last poll's failure to write the sheet's Page tab
         self.calls_path = calls_path   # AP calls transcribed by editors; re-read every poll
         self.caller = calls.Caller()
         self.rtm_sources = rtm_sources or {}
@@ -399,12 +404,20 @@ class Tracker:
         for name in jobs:
             if name not in fresh and self.last[name]:
                 snap["meta"][name]["stale"] = True
+        if self.sheet:   # the Google Sheet: send this drop, show its hand edits (before calls, so they count)
+            m = self.sheet.sync(snap)
+            if m.get("error"):
+                errors.append({"source": "sheet", "error": m["error"], "at": datetime.now(timezone.utc).isoformat(timespec="seconds")})
+            if self.page_error:
+                errors.append({"source": "sheet", "error": f"Page tab: {self.page_error}", "at": datetime.now(timezone.utc).isoformat(timespec="seconds")})
         try:   # AP calls only, transcribed by editors; never infer a winner from the count
             cfg = load_calls(self.calls_path)
             self.caller.apply(snap, cfg)
         except Exception as e:
             errors.append({"source": "calls", "error": str(e), "at": datetime.now(timezone.utc).isoformat(timespec="seconds")})
-        write_outputs(self.out_dir, snap)
+        hist = write_outputs(self.out_dir, snap)
+        if self.sheet:   # the finished snapshot, for a page that reads the sheet; a failure shows on the next poll
+            self.page_error = self.sheet.publish(snap, hist)
         return snap
 
 
@@ -478,6 +491,8 @@ def main(argv=None):
     ap.add_argument("--rtm-sources", default=str(HERE / "rtm_sources.json"), help="where to read Measure RTM in the other four counties")
     ap.add_argument("--rtm-manual", default=str(HERE / "rtm_manual.json"), help="hand-entered RTM numbers, used when a county cannot be read")
     ap.add_argument("--calls", default=str(HERE / "calls.json"), help="AP calls transcribed by editors (see calls.example.json)")
+    ap.add_argument("--sheet-url", default=os.environ.get("SHEET_URL"), help="Google Sheet Apps Script /exec URL (see sheet.py); secret in SHEET_SECRET")
+    ap.add_argument("--sheet-hold", type=float, default=sheet.HOLD, help="seconds a hand edit on the sheet waits before it is shown (default 300)")
     ap.add_argument("--mock", action="store_true", help="start the mock election-night server and poll it")
     ap.add_argument("--mock-port", type=int, default=8765)
     ap.add_argument("--start", type=float, default=-30.0, help="mock clock: sim minutes after 8 p.m.")
@@ -501,8 +516,14 @@ def main(argv=None):
     rtm_sources = load_rtm_sources(a.rtm_sources)
     if a.mock:   # every county's RTM source points at the mock server
         rtm_sources = mock_rtm_sources(sos_base)
+    link = None
+    if a.sheet_url:
+        if not os.environ.get("SHEET_SECRET"):
+            ap.error("--sheet-url needs the Apps Script secret in SHEET_SECRET")
+        link = sheet.Sheet(a.sheet_url, os.environ["SHEET_SECRET"], hold=a.sheet_hold)
+        print(f"[sheet] drops and hand edits via {a.sheet_url} (edits shown after {a.sheet_hold:g}s)")
     tr = Tracker(sos_base, alameda_base, a.election_id, out_dir, mock=a.mock, rtm_sources=rtm_sources, rtm_manual=a.rtm_manual,
-                 rtm_sources_path=None if a.mock else a.rtm_sources, calls_path=a.calls)
+                 rtm_sources_path=None if a.mock else a.rtm_sources, calls_path=a.calls, sheet_link=link)
     print(f"[poll] SoS {sos_base} | Alameda {alameda_base}/rovresults/{a.election_id}/ | every {a.interval:g}s")
     try:
         while True:

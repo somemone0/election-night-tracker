@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { CONFIG } from "../config";
 import type { HistoryPoint, Results } from "../types";
 import { S } from "../strings";
+import { decodePage } from "../lib/sheetPage";
 
 export interface Feed {
   data: Results | null;
@@ -17,6 +18,14 @@ async function getJson<T>(url: string, signal: AbortSignal): Promise<T> {
   const r = await fetch(`${url}?t=${Date.now()}`, { cache: "no-store", signal });
   if (!r.ok) throw new Error(`${url}: HTTP ${r.status}`);
   return r.json() as Promise<T>;
+}
+
+// No cache-busting query here: Google's own cache is what lets every reader poll the same published sheet.
+async function getSheet(signal: AbortSignal): Promise<[unknown, unknown]> {
+  const r = await fetch(CONFIG.sheet, { cache: "no-store", signal });
+  if (!r.ok) throw new Error(S.sheetFailed(r.status));
+  const page = decodePage(await r.text());
+  return [page.results, page.history];
 }
 
 export function looksLikeResults(x: unknown): x is Results {
@@ -38,7 +47,7 @@ export function useResults(): Feed {
       busy = true;
       const ctl = new AbortController(), to = window.setTimeout(() => ctl.abort(), CONFIG.fetchTimeoutMs);
       try {
-        const [res, hist] = await Promise.all([
+        const [res, hist] = CONFIG.sheet ? await getSheet(ctl.signal) : await Promise.all([
           getJson<unknown>(CONFIG.results, ctl.signal),
           getJson<HistoryPoint[]>(CONFIG.history, ctl.signal).catch(() => null),
         ]);
