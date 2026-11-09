@@ -79,25 +79,6 @@ class Pieces(unittest.TestCase):
         s = snapshot()
         self.assertEqual(sheet.apply(s, {k: v[1] for k, v in sheet.counts(s).items()}), [])
 
-    def test_page_rows_split_into_cells_and_join_back(self):
-        s = snapshot()
-        s["filler"] = "x" * (sheet.CHUNK * 2)        # three cells
-        rows = sheet.page_rows(s, [{"t": i} for i in range(sheet.PAGE_HISTORY + 50)])
-        self.assertEqual([r[0] for r in rows], ["results", "history"])
-        self.assertEqual(len(rows[0]), 4)
-        self.assertTrue(all(c.startswith("~") and len(c) <= sheet.CHUNK + 1 for r in rows for c in r[1:]))
-        self.assertEqual(json.loads("".join(c[1:] for c in rows[0][1:])), s)
-        hist = json.loads("".join(c[1:] for c in rows[1][1:]))
-        self.assertEqual((len(hist), hist[-1]), (sheet.PAGE_HISTORY, {"t": sheet.PAGE_HISTORY + 49}))
-
-    def test_publish_reports_failure(self):
-        def down(*_):
-            raise OSError("timed out")
-        self.assertEqual(sheet.Sheet("x", "s", poster=down).publish(snapshot(), []), "timed out")
-        sent = []
-        self.assertIsNone(sheet.Sheet("x", "s", poster=lambda u, s, body: sent.append(body)).publish(snapshot(), []))
-        self.assertEqual(sent[0]["page"][1], ["history", "~[]"])
-
     def test_cells(self):
         self.assertEqual([sheet.to_int(v) for v in (12, "1,234", 5.0, " 7 ", "abc", -1, 2.5, None, True)], [12, 1234, 5, 7, None, None, None, None, None])
 

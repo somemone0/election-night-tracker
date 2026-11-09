@@ -10,17 +10,11 @@ the clock, so the in-between value is never shown, and an edit whose count moves
 
 Keys (row 2 of the sheet, hidden) name a count: race:<Alameda race title>:<candidate or Yes/No>,
 rtm:<Yes/No> (the five-county total), prop:<number>:<Yes/No> (statewide), gov:<candidate> (statewide).
-
-After each poll the tracker also writes what the page reads (results.json and the end of history.json) to the Page
-tab, so the page can be hosted anywhere and read the sheet instead of the tracker (README, "Hosting on
-data.dailycal.org").
 """
 import json
 import urllib.request
 
 HOLD = 300
-PAGE_HISTORY = 300   # history points sent to the page: hours of election night at one per Secretary of State update
-CHUNK = 40000        # a sheet cell holds 50,000 characters
 USER_AGENT = "election-tracker/1.0 (newsroom results tracker)"
 
 
@@ -129,16 +123,6 @@ def apply(snap, values):
     return sorted(diff)
 
 
-def page_rows(snap, history):
-    """-> the Page tab: one row per file, [name, chunk, chunk, ...]. Each chunk starts with "~" so the sheet never takes
-    one for a formula or a number; the page drops it (web/src/lib/sheetPage.ts)."""
-    rows = []
-    for name, obj in (("results", snap), ("history", history[-PAGE_HISTORY:])):
-        text = json.dumps(obj, separators=(",", ":"))
-        rows.append([name] + ["~" + text[i:i + CHUNK] for i in range(0, len(text), CHUNK)])
-    return rows
-
-
 def post(url, secret, payload, timeout=25):
     body = json.dumps({"secret": secret, **payload}).encode()
     req = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json", "User-Agent": USER_AGENT})
@@ -177,11 +161,3 @@ class Sheet:
             meta["on_hold"] = sum(1 for p in (self.last.get("pending") or {}).values() if now - (p.get("at") or 0) < self.hold * 1000)
         snap["meta"]["sheet"] = meta
         return meta
-
-    def publish(self, snap, history):
-        """Write the finished snapshot to the Page tab for the page to read. -> an error message, or None."""
-        try:
-            self.post(self.url, self.secret, {"page": page_rows(snap, history)})
-        except Exception as e:
-            return str(e)
-        return None

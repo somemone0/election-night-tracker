@@ -170,6 +170,19 @@ def parse_mtc(html):
     m = re.search(r"<h2[^>]*>\s*Election Results\s*</h2>(.*?)(?=<h2|\Z)", html, re.S | re.I)
     if not m:
         raise LookupError("no 'Election Results' section on the MTC page")
+    # The page posts a table: County | Yes | No | Total | % Yes, one row per county and a "Regional Total" row
+    cell = lambda c: " ".join(unescape(re.sub(r"<[^>]+>", " ", c)).split())
+    for tbl in re.findall(r"<table.*?</table>", m.group(1), re.S | re.I):
+        head = [cell(c).lower() for c in re.findall(r"<th[^>]*>(.*?)</th>", tbl, re.S | re.I)]
+        if "yes" not in head or "no" not in head:
+            continue
+        for tr in re.findall(r"<tr.*?</tr>", tbl, re.S | re.I):
+            cells = [cell(c) for c in re.findall(r"<t[dh][^>]*>(.*?)</t[dh]>", tr, re.S | re.I)]
+            if len(cells) == len(head) and re.search(r"regional total", cells[0], re.I):
+                yes, no = cells[head.index("yes")], cells[head.index("no")]
+                if not (re.search(r"\d", yes) and re.search(r"\d", no)):
+                    raise LookupError("MTC has not posted Yes/No totals yet")
+                return _int(yes), _int(no), None
     text = " ".join(unescape(re.sub(r"<[^>]+>", " ", m.group(1))).split())
     labels = list(re.finditer(r"\b(yes|no)\b", text, re.I))
     got = {}

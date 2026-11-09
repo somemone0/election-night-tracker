@@ -13,6 +13,7 @@ Once:   python3 tracker.py --once --sos-base http://127.0.0.1:8765 --alameda-bas
 """
 import argparse
 import csv
+import gzip
 import json
 import os
 import re
@@ -34,7 +35,7 @@ import sheet
 HERE = Path(__file__).resolve().parent
 SOS_BASE = "https://api.sos.ca.gov"
 ALAMEDA_BASE = "https://alamedacountyca.gov"
-ELECTION_ID = "262"  # Nov 3, 2026 General on the Alameda results system
+ELECTION_ID = "260"  # Nov 3, 2026 General on the Alameda results system (262 is the Aug. 18 CD-14 special)
 HEADLINE_MEASURE = "40"
 ELECTION_DATE = date(2026, 11, 3)
 ELECTION_LABEL = "November 03, 2026"  # as printed in the county page title
@@ -150,7 +151,8 @@ def feed_warnings(sos_state, alameda):
     """Things that mean the numbers are not real Nov 3 results yet (test data, placeholder pages)."""
     out = []
     d = feed_date(sos_state["reporting_time"]) if sos_state else None
-    if d and d < ELECTION_DATE:
+    # The state posts test numbers before election day, then zeroes them without changing the date: zeros aren't test data
+    if d and d < ELECTION_DATE and any(m["total"] for m in sos_state["measures"].values()):
         out.append("Statewide numbers are pre-election test data, not results.")
     if alameda and ELECTION_LABEL not in (alameda["title"] or ""):
         out.append("Alameda County hasn't posted Nov. 3 results yet.")
@@ -339,7 +341,6 @@ def write_outputs(out_dir, snap):
     with open(tmp, "w", newline="") as f:
         csv.writer(f).writerows(lines)
     tmp.replace(out_dir / "races.csv")
-    return hist
 
 
 def atomic_write(path, text):
@@ -354,7 +355,6 @@ class Tracker:
                  calls_path=None, sheet_link=None):
         self.mock = mock
         self.sheet = sheet_link   # sheet.Sheet: the Google Sheet of drops and hand edits, or None
-        self.page_error = None    # the last poll's failure to write the sheet's Page tab
         self.calls_path = calls_path   # AP calls transcribed by editors; re-read every poll
         self.caller = calls.Caller()
         self.rtm_sources = rtm_sources or {}
@@ -408,16 +408,12 @@ class Tracker:
             m = self.sheet.sync(snap)
             if m.get("error"):
                 errors.append({"source": "sheet", "error": m["error"], "at": datetime.now(timezone.utc).isoformat(timespec="seconds")})
-            if self.page_error:
-                errors.append({"source": "sheet", "error": f"Page tab: {self.page_error}", "at": datetime.now(timezone.utc).isoformat(timespec="seconds")})
         try:   # AP calls only, transcribed by editors; never infer a winner from the count
             cfg = load_calls(self.calls_path)
             self.caller.apply(snap, cfg)
         except Exception as e:
             errors.append({"source": "calls", "error": str(e), "at": datetime.now(timezone.utc).isoformat(timespec="seconds")})
-        hist = write_outputs(self.out_dir, snap)
-        if self.sheet:   # the finished snapshot, for a page that reads the sheet; a failure shows on the next poll
-            self.page_error = self.sheet.publish(snap, hist)
+        write_outputs(self.out_dir, snap)
         return snap
 
 
@@ -470,9 +466,42 @@ def load_rtm_sources(path):
     return {k: v for k, v in rtm.load_json(path).items() if not k.startswith("_")}
 
 
+class SiteHandler(SimpleHTTPRequestHandler):
+    """Serves site/. The results in data/ double as the API for pages hosted elsewhere (data.dailycal.org, the
+    broadcast): any site may read them, and JSON goes out gzipped to readers that accept it."""
+    _gz = {}   # file -> (mtime, gzipped bytes)
+
+    def log_message(self, *a):
+        pass
+
+    def end_headers(self):
+        if self.path.startswith("/data/"):
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Cache-Control", "public, max-age=10")
+        super().end_headers()
+
+    def do_GET(self):
+        path = self.translate_path(self.path)
+        if not (self.path.startswith("/data/") and path.endswith(".json") and "gzip" in self.headers.get("Accept-Encoding", "")):
+            return super().do_GET()
+        try:
+            mtime = os.stat(path).st_mtime
+            hit = self._gz.get(path)
+            if not hit or hit[0] != mtime:
+                hit = self._gz[path] = (mtime, gzip.compress(Path(path).read_bytes(), 6))
+        except OSError:
+            return super().do_GET()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Encoding", "gzip")
+        self.send_header("Vary", "Accept-Encoding")
+        self.send_header("Content-Length", str(len(hit[1])))
+        self.end_headers()
+        self.wfile.write(hit[1])
+
+
 def serve_site(site_dir, port, host="127.0.0.1"):
-    handler = partial(SimpleHTTPRequestHandler, directory=str(site_dir))
-    handler.log_message = lambda *a, **k: None
+    handler = partial(SiteHandler, directory=str(site_dir))
     srv = ThreadingHTTPServer((host, port), handler)
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     return srv

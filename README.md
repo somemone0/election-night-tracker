@@ -6,7 +6,7 @@ Polls two public sources, writes JSON/CSV, and renders a static page styled afte
 | Data | Source | How |
 |---|---|---|
 | Prop 40, all statewide measures and the governor race, statewide and Alameda County | CA Secretary of State Election Night feed, `https://api.sos.ca.gov/returns/ballot-measures`, `/returns/governor` (each also under `/county/alameda`) | JSON, no key |
-| County, Berkeley and district contests (RCV first choices included) | Alameda Registrar results page, `https://alamedacountyca.gov/rovresults/262/` | HTML parsed with the stdlib |
+| County, Berkeley and district contests (RCV first choices included) | Alameda Registrar results page, `https://alamedacountyca.gov/rovresults/260/` | HTML parsed with the stdlib |
 
 Prop 40 in Alameda County comes from both sources, and the tracker flags it if they disagree.
 
@@ -26,11 +26,13 @@ statewide races and RTM. Selecting a row opens its results; council selections a
 Congress used to be a level of its own; it is now part of the Bay Area level, and old
 `#congress=12` links open there.
 
-Ballot question text is in `site/measures.json`, keyed `"Measure V"` (no "Bond", no " - City of ...") or `"Prop 40"`.
-The results feeds don't carry it. The Berkeley measures and RTM use editorial summaries of The Daily Californian’s Oct. 29, 2026 article,
+What each measure is lives in `site/measures.json`, keyed `"Measure V"` (no "Bond", no " - City of ...") or `"Prop 40"`.
+The results feeds don't carry it. Under “About the measure” the page shows the desk's one-line `short` label and a link
+(`source`, with the headline as `story`) to the Daily Californian article that describes the measure: Measure Z and
+Props. 40–42 have their own articles; the other Berkeley measures and RTM link to the Oct. 29, 2026 roundup
 [“Berkeley voters to decide on 8 measures”](https://www.dailycal.org/news/city/berkeley-voters-to-decide-on-8-measures/article_2e2e8fc9-be1d-4e97-91e9-5cf4876ebb52.html),
-shown under “About the measure” with a source link. They are not official ballot questions.
-Propositions without an entry show the Secretary of State's short ballot label. No rebuild is needed after editing the file.
+and the other propositions to the Oct. 29 state propositions guide. Propositions without a `short` show the Secretary
+of State's ballot label. No rebuild is needed after editing the file.
 
 The level changes once the zoom has moved 0.75 or more since the last change, or when the centre leaves the area,
 so small zooms and pans never flip it back and forth. Over water, the nearest area counts.
@@ -218,8 +220,8 @@ site/classic.html the previous single-file page, kept as a fallback
 site/geo/         map boundaries (state, county, congress, city)
 tools/build_geo.py  rebuilds site/geo from the official sources
 tools/prepare_headshots.py  resizes the headshot folder into site/img/headshots (needs Pillow)
-tools/build_dailycal.sh  builds the page for data.dailycal.org, reading results from the Google Sheet
-sheet.py          the Google Sheet link: drops, hand edits, and the Page tab the hosted page reads
+tools/build_dailycal.sh  builds the pages for data.dailycal.org, reading results from the Cloud Run tracker
+sheet.py          the Google Sheet link: drops and hand edits
 tools/sheet/Code.gs  the sheet's Apps Script
 rtm.py            Measure RTM: MTC's combined total, else the four other counties added up
 rtm_sources.json  where each county's RTM results come from (set Clarity addresses on election night)
@@ -284,32 +286,31 @@ the same `/exec` URL. A brand-new deployment gets a new URL.
 
 ## Hosting on data.dailycal.org
 
-The page can live on data.dailycal.org with no server behind it. The tracker runs anywhere (sonofthirtyninety) and
-writes to the sheet; the page reads the sheet:
+The tracker on Cloud Run is the one poller and the API. The pages live elsewhere and read it:
 
 ```
-tracker.py (polls the feeds)  ->  Google Sheet (Drops, Page tabs)  ->  data.dailycal.org/election-2026/ (reads Page)
+Cloud Run: tracker.py (polls the feeds, syncs the Google Sheet)  ->  /data/results.json, /data/history.json
+    <- data.dailycal.org/election-2026/  (the tracker page and broadcast.html)
+    <- the broadcast machine (sonofthirtyninety)
 ```
 
-* After every poll the tracker writes the finished results (with hand edits and calls) and the end of the history to
-  the sheet's **Page** tab, split across cells. Don't edit that tab.
-* The page reads it one of two ways. Publish to web (File, Share, Publish to web: the Page tab, CSV) is served by
-  Google's cache, so it holds up under any number of readers, but Google can take up to 5 minutes to refresh it. The
-  Apps Script `/exec` URL is current within seconds, but Google runs only about 30 at once per owner, so it can fail
-  under heavy traffic.
-* When reading the sheet, the page refreshes once a minute and says "last updated" only after 12 minutes without new
-  numbers.
+* `data/` on any tracker is readable from any site (`Access-Control-Allow-Origin: *`) and goes out gzipped
+  (`SiteHandler` in `tracker.py`). Each open page asks every 15 seconds.
+* Build the pages to read a given tracker with `VITE_API_BASE`. Without it, a page reads the tracker that serves it
+  (localhost, or Cloud Run's own copy).
 
 Build and copy into the data site
 ([dailycal-projects/dailycalprojects](https://github.com/dailycal-projects/dailycalprojects), a Gatsby site on
 Netlify; everything in `static/` is served as is):
 
 ```sh
-VITE_SHEET_URL='<the Page tab CSV link or the /exec URL>' tools/build_dailycal.sh ../dailycalprojects/static/election-2026
+VITE_API_BASE=https://election-tracker-zbx5klthrq-uw.a.run.app/ tools/build_dailycal.sh ../dailycalprojects/static/election-2026
 ```
 
 That serves the tracker at `data.dailycal.org/election-2026/` and the broadcast at `.../election-2026/broadcast.html`.
-Rebuild only when the page's code, `measures.json` or the headshots change. New numbers come through the sheet.
+Rebuild only when the page's code, `measures.json` or the headshots change; new numbers come from Cloud Run. The
+broadcast machine can open that broadcast URL, or build its own copy the same way and serve it with
+`python3 -m http.server`.
 
 ## Cloud Run
 
@@ -338,3 +339,17 @@ gcloud run services logs read election-tracker --project ac-transit-visualizer -
 Each container keeps its files on its own temporary disk. After a scale to zero or a redeploy, the Prop 40 history
 chart starts over, and the page shows no numbers until the first poll finishes (about 15 seconds). In mock mode the
 simulated clock also restarts from `MOCK_START` whenever a new instance starts.
+
+## After election night: static site on GCS
+
+The page is served from the public bucket `gs://ac-transit-visualizer-election` (built `site/`, minus `data/`), and the
+Cloud Run Job `election-tracker-poll` runs `publish.py`: one poll, then `data/results.json`, `history.json` and
+`races.csv` are uploaded with `Cache-Control: no-cache`. A run where SoS or Alameda failed uploads nothing.
+Cloud Scheduler job `election-tracker-poll` triggers it; pause it between drops.
+
+```sh
+gcloud run jobs execute election-tracker-poll --project ac-transit-visualizer --region us-west1 --wait   # poll now
+gcloud scheduler jobs pause  election-tracker-poll --project ac-transit-visualizer --location us-west1
+gcloud scheduler jobs resume election-tracker-poll --project ac-transit-visualizer --location us-west1
+gcloud storage rsync site gs://ac-transit-visualizer-election --recursive --exclude='^data/.*'      # after npm run build
+```

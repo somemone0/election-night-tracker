@@ -1,5 +1,5 @@
 // Every piece of text the tracker (index.html) and the Instagram broadcast (broadcast.html) show, in one place to edit.
-// Candidate names, race titles from the feeds, map area names and ballot questions (measures.json) come from the data,
+// Candidate names, race titles from the feeds, map area names and measure labels and article links (measures.json) come from the data,
 // not from here. Entries that are functions fill in numbers or names. Edit, then rebuild (npm run build).
 
 const DIGITS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
@@ -66,7 +66,6 @@ export const S = {
   // ---------- errors ----------
   brokePart: label => `Something went wrong showing ${label}. Will retry with the next update.`,
   needServer: "Open through a web server (python3 tracker.py --serve 8077)",
-  sheetFailed: status => `Can’t reach the results sheet (HTTP ${status}).`,
 
   // ---------- map and strip ----------
   mapLabel: "Map of results by area",
@@ -108,7 +107,8 @@ export const S = {
   pickRace: "Pick a race on the map.",
   onTheBallot: "About the measure",
   sosLabel: "Ballot label from the Secretary of State.",
-  source: "Source",
+  readMore: "Read more in The Daily Californian:",
+  dailyCal: "The Daily Californian’s coverage",
   sourcesLead: "Unofficial results. Sources:",
   sources: [
     { text: "California Secretary of State", href: "https://www.sos.ca.gov/elections/prior-elections/statewide-election-results" },
@@ -144,6 +144,6 @@ export const S = {
     majority: "a majority",
     twoThirdsTick: "Two-thirds",
     majorityTick: "Majority",
-    footer: when => `Unofficial results, updated ${when}. More results and updates at dailycal.org.`,
+    footer: when => `Unofficial results, updated ${when}. More results and updates at data.dailycal.org.`,
   },
 };

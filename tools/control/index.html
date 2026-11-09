@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Election Night Control</title>
+<style>
+body { max-width:1100px; margin:0 auto; padding:16px; font:16px/1.45 -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; color:#222; background:#fff; }
+h1 { font-size:24px; margin:0 0 4px; } h2 { font-size:18px; margin:28px 0 8px; border-bottom:1px solid #ccc; padding-bottom:3px; }
+code, pre, .mono { font-family:ui-monospace, Menlo, Consolas, monospace; font-size:14px; }
+a { color:#3465a4; }
+table { border-collapse:collapse; width:100%; font-size:14px; }
+th, td { border:1px solid #ccc; padding:4px 8px; text-align:left; vertical-align:top; }
+th { background:#f4f4f4; font-weight:600; }
+td.n { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.ok { color:#1a7f37; } .wait { color:#9a6700; } .down { color:#cf222e; font-weight:600; } .off { color:#888; }
+.bar { margin:8px 0 0; padding:8px 12px; border:1px solid #ccc; background:#f8f8f8; }
+.bar.red { border-color:#cf222e; background:#fff0f0; } .bar.amber { border-color:#d4a72c; background:#fff8e5; } .bar.green { border-color:#1a7f37; background:#eefbf0; }
+.bar ul { margin:4px 0 0; padding-left:20px; }
+.grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:12px; }
+fieldset { border:1px solid #ccc; padding:8px 12px 12px; margin:0; min-width:0; } legend { font-weight:600; padding:0 4px; }
+label { display:inline-block; margin:2px 10px 2px 0; }
+input[type=text], input[type=number] { font:inherit; font-size:14px; padding:3px 5px; width:100%; box-sizing:border-box; }
+button { font:inherit; font-size:14px; padding:3px 12px; cursor:pointer; }
+.small { font-size:13px; color:#666; }
+#msg { min-height:1.4em; }
+pre { background:#f6f8fa; border:1px solid #ddd; padding:8px; max-height:320px; overflow:auto; white-space:pre-wrap; word-break:break-word; margin:0; }
+.row { display:flex; gap:16px; flex-wrap:wrap; align-items:flex-start; }
+.row > * { flex:1 1 300px; min-width:0; }
+#vid { width:180px; border:1px solid #ccc; background:#000; display:block; }
+.onair { color:#fff; background:#cf222e; padding:1px 6px; font-weight:700; }
+.sf4 { display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:6px; margin:4px 0 6px; }
+@media (max-width:600px) { .sf4 { grid-template-columns:repeat(2, minmax(0,1fr)); } table { font-size:13px; } }
+[hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<h1>Election Night Control</h1>
+<div class="small"><span id="host">--</span> · <span id="clock">--</span> Pacific · <span id="polls">--</span></div>
+
+<div class="bar" id="status">loading…</div>
+<p id="msg" class="mono"></p>
+
+<h2>Controls</h2>
+<div class="grid">
+  <fieldset><legend>Data mode</legend>
+    <label><input type="radio" name="mode" value="REAL"> REAL <span class="small">(live feeds + sheet)</span></label><br>
+    <label><input type="radio" name="mode" value="MOCK"> MOCK <span class="small">(simulated)</span></label><br>
+    <label><input type="radio" name="mode" value="ZEROS"> ZEROS <span class="small">(pre-close)</span></label><br>
+    <label><input type="checkbox" id="arm"> allow test data on air <span class="small">(unchecks itself after 60 s)</span></label>
+  </fieldset>
+  <fieldset><legend>Stream · Facebook</legend>
+    <p style="margin:0 0 8px">State: <b id="st">--</b> · up <span id="stup">--</span> · FB limit in <span id="fblim">--</span></p>
+    <button id="start">Start stream</button> <button id="stop">Stop stream</button>
+    <p class="small" style="margin:8px 0 0">Only a private preview until Go Live is pressed in Live Producer.</p>
+  </fieldset>
+  <fieldset><legend>Tracker</legend>
+    <label>Poll <select data-key="poll_interval"><option value="30">30 s</option><option value="60">60 s</option><option value="120">120 s</option></select></label>
+    <label>Mock speed <select data-key="mock_speed"><option>SLOW</option><option>MED</option><option>FAST</option></select></label><br>
+    <label>RTM source <select data-key="rtm_source"><option value="AUTO">MTC, then counties</option><option value="COUNTIES">counties only</option></select></label>
+    <p class="small" style="margin:6px 0 0">Poll and mock speed restart the tracker.</p>
+  </fieldset>
+</div>
+
+<h2>Tracker &amp; stream</h2>
+<div class="row">
+  <table>
+    <tr><th>Tracker</th><td id="trk">--</td></tr>
+    <tr><th>Data age</th><td id="age">--</td></tr>
+    <tr><th>SoS reporting time</th><td id="sostime">--</td></tr>
+    <tr><th>Alameda updated</th><td id="alatime">--</td></tr>
+    <tr><th>Encoder</th><td id="enc">--</td></tr>
+    <tr><th>Public tunnel</th><td id="tun">--</td></tr>
+  </table>
+  <div style="flex:0 0 auto"><img id="vid" alt="stream preview" hidden><div id="novid" class="small">no stream preview</div></div>
+</div>
+
+<h2>Returns <span class="small" id="testtag"></span></h2>
+<table id="returns"></table>
+
+<h2>RTM by county</h2>
+<table id="rtm"></table>
+
+<h2>Sources <span class="small">probed every 30 s</span></h2>
+<table id="sources"></table>
+
+<h2>County inputs</h2>
+<div class="grid">
+  <fieldset><legend>Clarity addresses</legend>
+    <label style="display:block">Contra Costa<input type="text" id="cc" placeholder="https://results.enr.clarityelections.com/CA/Contra_Costa/…"></label>
+    <label style="display:block">Santa Clara<input type="text" id="sc" placeholder="https://results.enr.clarityelections.com/CA/Santa_Clara/…"></label>
+    <button id="saveclar">Save addresses</button>
+  </fieldset>
+  <fieldset><legend>San Francisco hand entry</legend>
+    <div class="small">Site blocks bots. Currently: <b id="sfstat">--</b></div>
+    <div class="sf4">
+      <label>Yes<input type="number" id="sfy" min="0"></label><label>No<input type="number" id="sfn" min="0"></label>
+      <label>Prec in<input type="number" id="sfd" min="0"></label><label>Of<input type="number" id="sft" min="0" placeholder="514"></label>
+      <label>As of<input type="text" id="sfa" placeholder="9:45 PM"></label>
+    </div>
+    <button id="sfsave">Enter</button> <button id="sfclear">Clear</button>
+  </fieldset>
+</div>
+
+<h2>Log <label class="small" style="font-weight:normal"><input type="radio" name="log" value="tracker" checked> tracker</label><label class="small" style="font-weight:normal"><input type="radio" name="log" value="stream"> stream</label> <span class="small" id="logstat"></span></h2>
+<pre id="log"></pre>
+
+<h2>Checklist</h2>
+<div id="check"></div>
+
+<script>
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+let S = null, logName = "tracker", formLoaded = false, armTimer = null, connectingSince = null;
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const fmtAge = s => s == null ? "--" : s < 90 ? Math.round(s) + "s" : s < 5400 ? Math.round(s / 60) + "m" : (s / 3600).toFixed(1) + "h";
+const fmtHMS = s => { s = Math.max(0, Math.round(s)); return [s / 3600 | 0, (s / 60 | 0) % 60, s % 60].map((v, i) => i ? String(v).padStart(2, "0") : v).join(":"); };
+const fmtN = n => n == null ? "--" : Number(n).toLocaleString("en-US");
+const pct = n => n == null ? "--" : Number(n).toFixed(1) + "%";
+const TZ = "America/Los_Angeles", POLLS_CLOSE = Date.parse("2026-11-04T04:00:00Z"), FB_LIMIT = 4 * 3600;
+const SRC = ["sos_state", "gov_state", "sos_alameda", "alameda", "mtc", "sanmateo", "sf", "cc", "sc"];
+
+async function api(path, body) {
+  const r = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json", "X-Control": "1" }, body: JSON.stringify(body) });
+  const j = await r.json().catch(() => ({ ok: false, message: "bad reply" }));
+  say(j.message || (r.ok ? "OK" : "ERROR"), !r.ok); setTimeout(refresh, 700); return j;
+}
+function say(msg, err) { $("#msg").textContent = new Date().toLocaleTimeString("en-US", { timeZone: TZ, hour12: false }) + "  " + msg; $("#msg").className = "mono " + (err ? "down" : ""); }
+
+// ---------- controls ----------
+$$("input[name=mode]").forEach(r => r.onchange = () => api("/api/mode", { mode: r.value, confirm: $("#arm").checked }).then(() => paint()));
+$("#arm").onchange = () => { clearTimeout(armTimer); if ($("#arm").checked) armTimer = setTimeout(() => { $("#arm").checked = false; say("test-data switch re-safed"); }, 60000); };
+$("#start").onclick = () => api("/api/stream", { action: "start", confirm: $("#arm").checked });
+$("#stop").onclick = () => { if (confirm("Stop the stream? This ends the Facebook live.")) api("/api/stream", { action: "stop" }); };
+$$("select[data-key]").forEach(s => s.onchange = () => api("/api/config", { [s.dataset.key]: s.dataset.key === "poll_interval" ? +s.value : s.value }));
+$("#saveclar").onclick = () => api("/api/config", { clarity: { "Contra Costa": $("#cc").value.trim(), "Santa Clara": $("#sc").value.trim() } });
+$("#sfsave").onclick = () => { if ($("#sfy").value === "" || $("#sfn").value === "") return say("SF needs yes and no", true);
+  api("/api/config", { sf: { yes: $("#sfy").value, no: $("#sfn").value, precincts_done: $("#sfd").value, precincts_total: $("#sft").value, as_of: $("#sfa").value } }); };
+$("#sfclear").onclick = () => { ["sfy", "sfn", "sfd", "sft", "sfa"].forEach(i => $("#" + i).value = ""); api("/api/config", { sf: {} }); };
+$$("input[name=log]").forEach(r => r.onchange = () => { logName = r.value; loadLog(); });
+
+// ---------- faults ----------
+function pollEvery() { return S.mode === "REAL" ? S.config.poll_interval : S.mode === "MOCK" ? 5 : 10; }
+function faults() {
+  const F = [], add = (lvl, text) => F.push({ lvl, text }), R = S.returns || {}, st = S.stream.state, P = id => S.probes.find(p => p.id === id);
+  if (!S.tracker.pid) add("red", "Tracker is not running");
+  else if (S.wanted_mode && S.mode !== S.wanted_mode) add("amber", `Tracker is in ${S.mode}, panel wants ${S.wanted_mode}`);
+  if (S.mode && S.mode !== "REAL") add(st === "OFF" ? "amber" : "red", st === "OFF" ? `${S.mode} data selected` : `${S.mode} data is on the stream`);
+  const da = S.tracker.data_age, every = S.mode ? pollEvery() : 60;
+  if (S.tracker.pid && (da == null || da > every * 2 + 30)) add(da == null || da > every * 5 + 60 ? "red" : "amber", da == null ? "Tracker has written no results yet" : `Results are ${fmtAge(da)} old (poll ${every}s)`);
+  (R.errors || []).forEach(e => add("amber", `Feed error · ${e.source}: ${e.error}`));
+  (R.warnings || []).forEach(w => add("amber", w));
+  S.probes.filter(p => SRC.includes(p.id) && p.state === "down").forEach(p => add("red", `${p.label}: ${p.detail}${p.last_ok ? ` (last ok ${fmtAge(S.now - p.last_ok)} ago)` : ""}`));
+  if (R.headline && R.headline.agree === false) add("amber", "Alameda Prop 40: SoS and Registrar numbers differ");
+  const rt = R.rtm; if (rt) rt.counties.filter(c => c.status === "error").forEach(c => add("red", `RTM ${c.county}: ${c.note || "error"}`));
+  if (rt && !rt.complete) add("amber", `RTM total has ${rt.counties_in ?? 0}/5 counties`);
+  const sh = P("sheet"); if (S.mode === "REAL" && sh && sh.state === "down") add("red", `Google Sheet: ${sh.detail}`);
+  const fb = P("facebook"); if (fb && fb.state === "down") add("red", `Facebook ingest unreachable: ${fb.detail}`);
+  if (connectingSince && Date.now() - connectingSince > 45000) add("red", `Encoder ${st} for ${fmtAge((Date.now() - connectingSince) / 1000)}`);
+  const up = S.stream.uptime; if (up != null && up > FB_LIMIT - 1800) add(up > FB_LIMIT - 600 ? "red" : "amber", `Facebook may end the live in ${fmtHMS(FB_LIMIT - up)}: plan the restart`);
+  return F;
+}
+
+// ---------- painting ----------
+function paint() {
+  if (!S) return;
+  const st = S.stream.state, onair = st === "ON AIR", R = S.returns || {}, P = id => S.probes.find(p => p.id === id) || { state: "off", detail: "not probed yet" };
+  connectingSince = (st === "CONNECTING" || st === "STARTING") ? (connectingSince || Date.now()) : null;
+  $("#host").textContent = S.host;
+
+  const F = faults(), lvl = F.some(f => f.lvl === "red") ? "red" : F.length ? "amber" : "green";
+  $("#status").className = "bar " + lvl;
+  $("#status").innerHTML = `${onair ? '<span class="onair">ON AIR</span> ' : `<b>${esc(st)}</b> · `}mode <b>${esc(S.mode || "none")}</b> · data ${fmtAge(S.tracker.data_age)} old` +
+    (F.length ? `<ul>${F.map(f => `<li class="${f.lvl === "red" ? "down" : ""}">${esc(f.text)}</li>`).join("")}</ul>` : " · all good");
+
+  // controls
+  $$("input[name=mode]").forEach(r => r.checked = r.value === S.mode);
+  $$("select[data-key]").forEach(s => { if (document.activeElement !== s) s.value = String(S.config[s.dataset.key]); });
+  $("#st").textContent = st; $("#st").className = onair ? "down" : "";
+  $("#stup").textContent = S.stream.uptime != null ? fmtHMS(S.stream.uptime) : "--";
+  $("#fblim").textContent = S.stream.uptime != null ? fmtHMS(FB_LIMIT - S.stream.uptime) : "--";
+  const c = S.config;
+  if (!formLoaded) { formLoaded = true; $("#cc").value = c.clarity["Contra Costa"] || ""; $("#sc").value = c.clarity["Santa Clara"] || "";
+    const sf = c.sf || {}; $("#sfy").value = sf.yes ?? ""; $("#sfn").value = sf.no ?? ""; $("#sfd").value = sf.precincts_done ?? ""; $("#sft").value = sf.precincts_total ?? ""; $("#sfa").value = sf.as_of ?? ""; }
+  const sfr = ((R.rtm || {}).counties || []).find(x => x.county === "San Francisco");
+  $("#sfstat").textContent = !sfr ? "--" : sfr.status === "manual" ? `hand entry in use (${sfr.note || ""})` : sfr.status === "ok" ? "automatic feed ok" : c.sf && c.sf.yes != null ? "saved" : "nothing entered";
+
+  // tracker & stream
+  $("#trk").textContent = S.tracker.pid ? `${S.mode} · poll ${pollEvery()}s · pid ${S.tracker.pid} · up ${fmtAge(S.tracker.uptime)}` : "NOT RUNNING";
+  $("#age").textContent = fmtAge(S.tracker.data_age); $("#sostime").textContent = R.sos_time || "--"; $("#alatime").textContent = R.alameda_time || "--";
+  $("#enc").textContent = S.stream.pid ? `${st} · pid ${S.stream.pid} · up ${fmtAge(S.stream.uptime)}` : st;
+  const tu = P("tunnel"); $("#tun").innerHTML = /^https:/.test(tu.detail) ? `<a href="${esc(tu.detail)}" target="_blank" rel="noopener">${esc(tu.detail)}</a>` : esc(tu.detail);
+  const vid = $("#vid");
+  if (st === "OFF" || st === "STARTING") { if (vid.getAttribute("src")) vid.removeAttribute("src"); vid.hidden = true; $("#novid").hidden = false; }
+  else { if (!vid.getAttribute("src")) vid.src = "/video.mjpg?" + Date.now(); vid.hidden = false; $("#novid").hidden = true; }
+
+  // returns
+  $("#testtag").textContent = S.mode && S.mode !== "REAL" ? `(${S.mode} data)` : "";
+  const h = R.headline || {}, g = R.gov || {};
+  const yn = (name, where, m) => `<tr><td>${name}</td><td>${where}</td>` + (m ? `<td class="n">${pct(m.yes_pct)}</td><td class="n">${fmtN(m.yes)}</td><td class="n">${fmtN(m.no)}</td><td class="n">${m.precincts ? pct(m.precincts.pct) : "--"}</td>` : `<td class="n off" colspan="4">no data</td>`) + "</tr>";
+  const gov = w => { const cs = g[w] || []; return `<tr><td>Governor</td><td>${w === "state" ? "Statewide" : "Alameda"}</td><td colspan="4">${cs.length ? cs.map(x => `${esc(x.name)} (${esc((x.party || "").slice(0, 1))}) <b>${pct(x.pct)}</b> · ${fmtN(x.votes)}`).join(" &nbsp;vs&nbsp; ") : '<span class="off">no data</span>'}</td></tr>`; };
+  $("#returns").innerHTML = `<tr><th>Contest</th><th>Where</th><th>Yes %</th><th>Yes</th><th>No</th><th>Precincts</th></tr>` +
+    yn(`Prop ${esc(h.number || "40")}`, "Statewide (SoS)", h.state) + yn(`Prop ${esc(h.number || "40")}`, "Alameda (SoS)", h.alameda) +
+    yn(`Prop ${esc(h.number || "40")}`, `Alameda (Registrar)${h.agree === false ? ' <span class="wait">differs</span>' : h.agree ? ' <span class="ok">matches</span>' : ""}`, h.alameda_page) +
+    gov("state") + gov("alameda") + (R.rtm ? yn("RTM", `5-county total (${R.rtm.counties_in ?? 0}/5 in)`, R.rtm.total) : "");
+  const rt = R.rtm;
+  $("#rtm").innerHTML = `<tr><th>County</th><th>Status</th><th>Yes %</th><th>Votes</th><th>Precincts</th><th>Source / note</th></tr>` + (rt ? rt.counties.map(c => {
+    const have = c.status === "ok" || c.status === "manual", cls = c.status === "ok" ? "ok" : c.status === "manual" ? "wait" : c.status === "error" ? "down" : "off";
+    return `<tr><td>${esc(c.county)}</td><td class="${cls}">${esc(c.status)}</td><td class="n">${have ? pct(c.yes_pct) : "--"}</td><td class="n">${fmtN((c.yes || 0) + (c.no || 0))}</td><td class="n">${c.precincts ? pct(c.precincts.pct) : "--"}</td><td>${esc(c.note || c.source || "")}</td></tr>`; }).join("") : `<tr><td colspan="6" class="off">no RTM numbers yet</td></tr>`);
+
+  // sources
+  $("#sources").innerHTML = `<tr><th>Source</th><th>State</th><th>Detail</th><th>ms</th><th>Last ok</th></tr>` + S.probes.map(p =>
+    `<tr><td>${esc(p.label)}</td><td class="${p.state}">${esc(p.state)}</td><td>${esc(p.detail)}</td><td class="n">${p.ms ?? "--"}</td><td class="n">${p.last_ok ? fmtAge(S.now - p.last_ok) + " ago" : "--"}</td></tr>`).join("");
+}
+
+function tick() {
+  const now = Date.now(), d = (POLLS_CLOSE - now) / 1000;
+  $("#clock").textContent = new Date(now).toLocaleTimeString("en-US", { timeZone: TZ, hour12: false });
+  $("#polls").textContent = d > 0 ? `polls close in ${fmtHMS(d)}` : `polls closed ${fmtHMS(-d)} ago`;
+}
+setInterval(tick, 1000); tick();
+
+async function refresh() { try { S = await (await fetch("/api/state")).json(); paint(); } catch (e) { say("panel cannot reach its server", true); } }
+async function loadLog() {
+  try { const j = await (await fetch("/api/log?name=" + logName)).json(), p = $("#log"), stick = p.scrollTop + p.clientHeight >= p.scrollHeight - 30;
+    const errs = j.text.split("\n").filter(l => /error|traceback|exception|fail|refused/i.test(l)).length;
+    p.textContent = j.text; $("#logstat").textContent = `${j.name}, last 40 lines, ${errs} with errors`;
+    if (stick) p.scrollTop = p.scrollHeight;
+  } catch (e) {}
+}
+const ITEMS = [
+  "Rotate the stream key and the sheet secret (both were pasted in chat)", "Clear test rows from the sheet's Drops and Page tabs", "Paste the Contra Costa and Santa Clara Clarity addresses",
+  "Check the tracker is in REAL and the test-data switch is off", "Live Producer open, audience set, preview looks right", "Press Go Live in Facebook Live Producer (cannot be done here)",
+  "9 p.m.: check the MTC row turns ok and its totals parse", "San Francisco: type its numbers in after each release", "Desk calls.json ready for race calls",
+  "Facebook ends a live after ~4 hours: plan the restart", "Named tunnel / redeploy if the phone link should survive a reboot"];
+(function checklist() {
+  let saved = {}; try { saved = JSON.parse(localStorage.getItem("ctl-check") || "{}"); } catch (e) {}
+  ITEMS.forEach((t, i) => { const l = document.createElement("label"); l.style.display = "block"; l.innerHTML = `<input type="checkbox" ${saved[i] ? "checked" : ""}> ${esc(t)}`;
+    l.querySelector("input").onchange = e => { saved[i] = e.target.checked; try { localStorage.setItem("ctl-check", JSON.stringify(saved)); } catch (x) {} }; $("#check").appendChild(l); });
+})();
+refresh(); loadLog(); setInterval(refresh, 2000); setInterval(loadLog, 4000);
+</script>
+</body>
+</html>

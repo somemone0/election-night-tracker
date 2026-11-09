@@ -12,10 +12,12 @@ import { apTime } from "../lib/format";
 import { type BigBlock, type Block, type BroadcastConfig, buildSlides, type CandBlock, DEFAULT_CONFIG, type MeasureBlock } from "./slides";
 import { S } from "../strings";
 
-const W = 1080, H = 1920;
-const ROW_GAP_MS = 130, FIRST_ROW_MS = 200, LEAVE_MS = 450, COUNT_MS = 900;
 const params = new URLSearchParams(location.search);
 const STILL = params.has("still");
+// ?shape=wide: a 1920x1080 stage for players that only show landscape (X), with the races in two columns
+const WIDE = params.get("shape") === "wide";
+const W = WIDE ? 1920 : 1080, H = WIDE ? 1080 : 1920;
+const ROW_GAP_MS = 130, FIRST_ROW_MS = 200, LEAVE_MS = 450, COUNT_MS = 900;
 
 function useConfig(): BroadcastConfig {
   const [cfg, setCfg] = useState(DEFAULT_CONFIG);
@@ -122,7 +124,7 @@ export function Broadcast() {
   const [leaving, setLeaving] = useState(false);
   const [scale, setScale] = useState(1);
 
-  useLayoutEffect(() => {   // fit the 1080x1920 stage in the window (OBS uses exactly 1080x1920, so scale 1)
+  useLayoutEffect(() => {   // fit the stage in the window (OBS uses exactly 1080x1920, so scale 1)
     const fit = () => setScale(Math.min(window.innerWidth / W, window.innerHeight / H));
     fit(); window.addEventListener("resize", fit);
     return () => window.removeEventListener("resize", fit);
@@ -135,14 +137,14 @@ export function Broadcast() {
     return () => { window.clearTimeout(a); window.clearTimeout(b); };
   }, [step, slides.length, ms, hold]);
 
-  if (!slides.length) return <div className="bc-fit"><div className="stage wait" style={{ transform: `scale(${scale})` }}>{feed.error ?? S.loadingResults}</div></div>;
+  if (!slides.length) return <div className="bc-fit"><div className={"stage wait" + (WIDE ? " wide" : "")} style={{ transform: `scale(${scale})` }}>{feed.error ?? S.loadingResults}</div></div>;
   const idx = hold != null ? Math.abs(Number(hold) || 0) % slides.length : step % slides.length;
   const cur = slides[idx];
   const updated = feed.data ? apTime(new Date(feed.data.generated_at)) : "";
 
   return (
     <div className="bc-fit">
-      <div className={"stage" + (STILL ? " still" : "")} style={{ transform: `scale(${scale})`, ["--slide" as any]: ms + "ms" }}>
+      <div className={"stage" + (STILL ? " still" : "") + (WIDE ? " wide" : "")} style={{ transform: `scale(${scale})`, ["--slide" as any]: ms + "ms" }}>
         <header>
           <div className="mast">
             <img src="img/dc-logo.png" alt={S.paper} /><span className="yr">{S.bc.year}</span>

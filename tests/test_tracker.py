@@ -46,6 +46,18 @@ class ParserTests(unittest.TestCase):
         self.assertGreaterEqual(len(berkeley), 14)
 
 
+class WarningTests(unittest.TestCase):
+    def sos(self, when, yes):
+        return {"reporting_time": when, "measures": {"40": tracker.measure_summary(yes, yes // 2)}}
+
+    def test_test_data_before_election_day_is_flagged(self):
+        self.assertIn("Statewide numbers are pre-election test data, not results.", tracker.feed_warnings(self.sos("November 2, 2026, 6:28 p.m.", 1000), None))
+
+    def test_zeroed_feed_with_old_date_is_not_test_data(self):
+        self.assertEqual(tracker.feed_warnings(self.sos("November 2, 2026, 6:28 p.m.", 0), None), [])
+        self.assertEqual(tracker.feed_warnings(self.sos("November 3, 2026, 8:15 p.m.", 1000), None), [])
+
+
 class RosterTests(unittest.TestCase):
     def test_placeholder_page_gets_candidate_lists(self):
         placeholder = {"updated": "Thursday, September 17, 2026; 2:53 PM", "title": "Congressional District 14 Special General Election - August 18, 2026 Certified Final Results", "races": []}
@@ -183,6 +195,42 @@ class TrackerTests(MockCase):
                 urllib.request.urlopen(self.base + "/__mock/fault?mode=none").read()
             self.assertTrue(snap["meta"]["errors"])
             self.assertFalse(snap["meta"]["sos_state"]["ok"])
+
+
+class ApiTests(unittest.TestCase):
+    """data/ is the API for pages hosted elsewhere: readable from any site, gzipped when asked."""
+    def setUp(self):
+        self.dir = tempfile.TemporaryDirectory()
+        site = Path(self.dir.name)
+        (site / "data").mkdir()
+        (site / "data" / "results.json").write_text(json.dumps({"races": ["x"] * 500}))
+        (site / "index.html").write_text("<p>page</p>")
+        self.srv = tracker.serve_site(site, 0)
+        self.base = f"http://127.0.0.1:{self.srv.server_address[1]}"
+
+    def tearDown(self):
+        self.srv.shutdown()
+        self.srv.server_close()
+        self.dir.cleanup()
+
+    def get(self, path, gz):
+        req = urllib.request.Request(self.base + path, headers={"Accept-Encoding": "gzip"} if gz else {})
+        with urllib.request.urlopen(req) as r:
+            return r.headers, r.read()
+
+    def test_results_readable_from_other_sites_and_gzipped(self):
+        h, body = self.get("/data/results.json?t=1", gz=True)
+        self.assertEqual(h["Access-Control-Allow-Origin"], "*")
+        self.assertEqual(h["Content-Encoding"], "gzip")
+        self.assertEqual(json.loads(tracker.gzip.decompress(body))["races"][0], "x")
+        h, body = self.get("/data/results.json", gz=False)
+        self.assertIsNone(h["Content-Encoding"])
+        self.assertEqual(len(json.loads(body)["races"]), 500)
+
+    def test_page_itself_is_not_an_api(self):
+        h, _ = self.get("/index.html", gz=True)
+        self.assertIsNone(h["Access-Control-Allow-Origin"])
+        self.assertIsNone(h["Content-Encoding"])
 
 
 if __name__ == "__main__":

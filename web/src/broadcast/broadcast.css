@@ -1,7 +1,7 @@
 /* The Instagram broadcast, set like the website (styles.css) at phone-video size: the AC Transit story palette, Georgia
    for names, numbers and body copy, hairline rules instead of boxes, square corners, council
    districts marked with blue, amber and warm gray shades. Leaders are bold white and the rest muted, as in the website's tables.
-   Sizes are in px of the 1080x1920 stage. */
+   Sizes are in px of the 1080x1920 stage (1920x1080 for ?shape=wide, at the end). */
 :root {
   --board: #0D0D0D; --board-2: #1A1A19; --board-3: #252523; --text: #FFFFFF; --muted: #C3C2B7; --soft-ink: #8E8D84;
   --hair: #383835; --line: rgba(195, 194, 183, .14); --mid: rgba(195, 194, 183, .10);
@@ -91,3 +91,16 @@ html, body { margin: 0; height: 100%; background: var(--board); overflow: hidden
 
 .stage.still *, .stage.still *::before, .stage.still *::after { animation: none !important; transition: none !important; }
 .stage.still .tabs i.run { width: 100%; }
+
+/* ?shape=wide (X): logo and tabs in one row, the races in two columns, same type sizes */
+.stage.wide { width: 1920px; height: 1080px; padding: 56px 96px 0; }
+.stage.wide header { display: flex; align-items: flex-end; gap: 72px; border-bottom: 1.5px solid var(--hair); }
+.stage.wide .mast { flex: none; gap: 18px; padding-bottom: 20px; }
+.stage.wide .mast img { width: 96px; height: 96px; }
+.stage.wide .mast .yr { font-size: 112px; }
+.stage.wide .tabs { flex: 1; margin: 0; border-bottom: 0; }
+.stage.wide .content { display: grid; grid-template-columns: 1fr 1fr; column-gap: 80px; align-content: start; padding-top: 28px; }
+.stage.wide .content > .note { grid-column: 1 / -1; margin-bottom: 14px; }
+.stage.wide .content > .note + .blk { margin-top: 0; }
+.stage.wide .content > .blk:nth-child(-n + 2), .stage.wide .content > .note ~ .blk:nth-child(-n + 3) { border-top: 3px solid var(--text); }
+.stage.wide .foot { left: 96px; right: 96px; bottom: 44px; }

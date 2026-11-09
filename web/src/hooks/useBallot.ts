@@ -1,9 +1,9 @@
-// Ballot question text for measures, from site/measures.json (typed in by the desk from the county's sample ballot and
-// the Secretary of State's voter guide; none of the results feeds carry it). Fetched once; missing or broken is fine.
+// What each measure is, from site/measures.json: a one-line label written by the desk and a link to the Daily
+// Californian article that describes it (none of the results feeds carry either). Fetched once; missing or broken is fine.
 import { useEffect, useState } from "react";
 import { CONFIG } from "../config";
 
-export interface BallotText { question: string; source?: string; short?: string }   // short: the broadcast's one-line label
+export interface BallotText { short?: string; source?: string; story?: string }   // short: one-line label; source/story: the article's link and headline
 export type Ballot = Record<string, BallotText>;
 
 /** "Bond Measure U - City of Berkeley" -> "Measure U"; "Prop 40" stays. Keys in measures.json use this form. */
@@ -16,8 +16,9 @@ export function useBallot(): Ballot {
       const out: Ballot = {};
       for (const [k, v] of Object.entries((j && j.measures) || {})) {
         const t = v as Partial<BallotText>;
-        const question = typeof t?.question === "string" ? t.question.trim() : "", short = typeof t?.short === "string" ? t.short.trim() : "";
-        if (question || short) out[k] = { question, source: typeof t.source === "string" && t.source ? t.source : undefined, short: short || undefined };
+        const str = (x: unknown) => (typeof x === "string" && x.trim()) || undefined;
+        const e = { short: str(t?.short), source: str(t?.source), story: str(t?.story) };
+        if (e.short || e.source) out[k] = e;
       }
       setB(out);
     }).catch(() => {});

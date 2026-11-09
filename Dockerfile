@@ -14,7 +14,7 @@ RUN npx tsc --noEmit && npx vite build
 FROM python:3.12-slim
 WORKDIR /app
 ENV PYTHONUNBUFFERED=1
-COPY tracker.py alameda_parse.py rtm.py calls.py sheet.py mock_server.py rtm_sources.json ./
+COPY tracker.py alameda_parse.py rtm.py calls.py sheet.py mock_server.py publish.py rtm_sources.json ./
 COPY fixtures/ fixtures/
 COPY --from=web /src/site/ site/
 RUN mkdir -p site/data

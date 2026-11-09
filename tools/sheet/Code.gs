@@ -9,11 +9,8 @@
 // rows are history and do nothing.
 // _feed (hidden): the last counts from the feeds. _pending (hidden): hand edits in the last row, with what the cell
 // held before and when it was edited.
-// Page: what the page reads (results.json, the end of history.json), rewritten after every poll; one row per file,
-// split across cells. A page hosted elsewhere reads it from File > Share > Publish to web (this tab, CSV) or from this
-// web app's /exec URL (doGet). Don't edit it.
 
-const DROPS = "Drops", FEED = "_feed", PENDING = "_pending", PAGE = "Page", FIRST = 3;
+const DROPS = "Drops", FEED = "_feed", PENDING = "_pending", FIRST = 3;
 
 function doPost(e) {
   const body = JSON.parse(e.postData.contents);
@@ -22,7 +19,6 @@ function doPost(e) {
   lock.waitLock(20000);
   try {
     const ss = SpreadsheetApp.getActive();
-    if (body.page) { writePage(tab(ss, PAGE, false), body.page); return json({ ok: true }); }
     const drops = tab(ss, DROPS, false), feedTab = tab(ss, FEED, true), pendTab = tab(ss, PENDING, true);
     const values = body.values || {}, labels = body.labels || {};
 
@@ -91,27 +87,6 @@ function onEdit(e) {
   } finally {
     lock.releaseLock();
   }
-}
-
-// The page's data for anyone (no secret: it is what the page shows): {"results": ..., "history": ...}.
-function doGet() {
-  const sh = SpreadsheetApp.getActive().getSheetByName(PAGE), files = {};
-  if (sh && sh.getLastRow() >= 1) {
-    sh.getRange(1, 1, sh.getLastRow(), sh.getLastColumn()).getValues().forEach(r => {
-      files[r[0]] = r.slice(1).filter(String).map(c => String(c).slice(1)).join("");
-    });
-  }
-  return ContentService.createTextOutput('{"results":' + (files.results || "null") + ',"history":' + (files.history || "[]") + "}")
-    .setMimeType(ContentService.MimeType.JSON);
-}
-
-function writePage(sh, rows) {
-  const width = Math.max.apply(null, rows.map(r => r.length));
-  const grid = rows.map(r => r.concat(new Array(width - r.length).fill("")));
-  sh.clearContents();
-  const range = sh.getRange(1, 1, grid.length, width);
-  range.setNumberFormat("@");   // plain text: never read a chunk as a number or date
-  range.setValues(grid);
 }
 
 function tab(ss, name, hidden) {

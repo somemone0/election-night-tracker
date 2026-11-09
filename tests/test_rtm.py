@@ -1,4 +1,5 @@
 import json
+import re
 import sys
 import tempfile
 import threading
@@ -47,6 +48,16 @@ class MtcTests(unittest.TestCase):
         table = "<table><tr><th>Choice</th><th>Votes</th><th>%</th></tr><tr><td>Yes</td><td>1,234,567</td><td>54.32%</td></tr><tr><td>No</td><td>1,000,000</td><td>45.68%</td></tr></table>"
         self.assertEqual(rtm.parse_mtc(self.page % table)[:2], (1234567, 1000000))
         self.assertEqual(rtm.parse_mtc(self.page % "<p>Yes: 700 (58.3%)<br>No: 500 (41.7%)</p>")[:2], (700, 500))
+
+    def test_county_table_regional_total(self):
+        # the real table MTC posted on election night: one row per county and a Regional Total, empty until filled in
+        html = (FIX / "mtc_table_empty.html").read_text()
+        with self.assertRaises(LookupError):
+            rtm.parse_mtc(html)
+        row = lambda name, y, n: f"<td>{name}</td> <td>{y:,}</td> <td>{n:,}</td> <td>{y + n:,}</td> <td>{100 * y / (y + n):.1f}%</td>"
+        html = html.replace("<td>Alameda</td>" + " <td>&nbsp;</td>" * 4, row("Alameda", 164434, 88866))
+        filled = re.sub(r"<td>Regional Total</td>\s*(<td>&nbsp;</td>\s*){4}", row("Regional Total", 482883, 341071), html)
+        self.assertEqual(rtm.parse_mtc(filled)[:2], (482883, 341071))   # the total row, not the first county
 
     def test_collect_prefers_mtc_then_falls_back(self):
         pages = {"mtc": (self.page % "<p>Yes 600 No 400</p>").encode()}

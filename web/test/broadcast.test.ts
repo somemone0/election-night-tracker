@@ -6,7 +6,7 @@ import { mockResults, rosterRaces } from "./helpers";
 
 let D: Results;
 beforeAll(() => { D = mockResults(8797); });   // own port: test files run in parallel
-const ballot = { "Measure V": { question: "", short: "0.5% sales tax for the general fund" }, "Prop 40": { question: "", short: "5% wealth tax" } };
+const ballot = { "Measure V": { short: "0.5% sales tax for the general fund" }, "Prop 40": { short: "5% wealth tax" } };
 
 describe("broadcast slides", () => {
   it("loops council, measures, school board, the Bay Area and the state", () => {
@@ -52,7 +52,7 @@ describe("broadcast slides", () => {
     expect(block).toMatchObject({ called: true, passed: true, yes: 20 });
   });
   it("keeps RTM ballot copy when its display title is edited", () => {
-    const slides = buildSlides(D, { "Measure RTM": { question: "", short: "Transit funding" } });
+    const slides = buildSlides(D, { "Measure RTM": { short: "Transit funding" } });
     const rtm = slides.find(s => s.key === "bay")!.blocks.find(b => b.key === "rtm");
     expect(rtm).toMatchObject({ title: "Regional Transit Measure", label: "Transit funding" });
   });

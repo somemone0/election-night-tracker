@@ -46,7 +46,7 @@ export function Detail({ D, history, sel, ballot }: DetailProps) {
   const s = resolve(D, history, sel);
   if (!s) return <p className="empty">{S.pickRace}</p>;
   const text = s.ballot ? ballot[s.ballot.key] : undefined;
-  const question = text?.question || s.ballot?.fallback?.trim();
+  const label = text?.short || s.ballot?.fallback?.trim();
   return (
     <>
       <div className="rhead">
@@ -54,12 +54,12 @@ export function Detail({ D, history, sel, ballot }: DetailProps) {
         <h1>{s.title}</h1>
       </div>
       {s.body}
-      {question && (
+      {(label || text?.source) && (
         <div className="ballot">
           <h2>{S.onTheBallot}</h2>
-          <p>{question}</p>
-          {!text?.question && <div className="note">{S.sosLabel}</div>}
-          {text?.source && <div className="note"><a href={text.source} rel="noopener">{S.source}</a></div>}
+          {label && <p>{label}</p>}
+          {label && !text?.short && <div className="note">{S.sosLabel}</div>}
+          {text?.source && <div className="note">{S.readMore} <a href={text.source} rel="noopener">{text.story ?? S.dailyCal}</a></div>}
         </div>
       )}
       <div className="foot">
